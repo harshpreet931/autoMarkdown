@@ -40,9 +40,15 @@ program
       console.log(chalk.blue('Analyzing codebase...'));
 
       // Parse options
+      const maxFileSize = parseInt(options.maxSize);
+      if (isNaN(maxFileSize) || maxFileSize <= 0) {
+        console.error(chalk.red(`Error: Invalid max-size "${options.maxSize}". Must be a positive number.`));
+        process.exit(1);
+      }
+
       const conversionOptions = {
         includeHidden: options.includeHidden,
-        maxFileSize: parseInt(options.maxSize),
+        maxFileSize,
         excludePatterns: options.exclude.split(',').map((p: string) => p.trim()),
         includePatterns: options.include.split(',').map((p: string) => p.trim()),
         outputFormat: options.format as 'markdown' | 'json',
