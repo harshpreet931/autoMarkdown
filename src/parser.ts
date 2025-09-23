@@ -74,8 +74,19 @@ export class CodebaseParser {
         const stat = await fs.promises.stat(fullPath);
 
         if (stat.isFile() && stat.size <= this.options.maxFileSize!) {
+          // Additional check: skip binary files by extension
+          if (this.isBinaryFile(match)) {
+            continue;
+          }
+
           try {
             const content = await fs.promises.readFile(fullPath, 'utf-8');
+
+            // Additional check: skip files with binary content
+            if (this.containsBinaryContent(content)) {
+              continue;
+            }
+
             const fileInfo: FileInfo = {
               path: match,
               content,
@@ -140,6 +151,43 @@ export class CodebaseParser {
     };
 
     return buildStructure(projectPath);
+  }
+
+  private isBinaryFile(filePath: string): boolean {
+    const ext = path.extname(filePath).toLowerCase();
+    const binaryExtensions = [
+      // Images
+      '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff', '.webp', '.svg', '.ico',
+      // Videos
+      '.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm', '.mkv',
+      // Audio
+      '.mp3', '.wav', '.ogg', '.flac', '.aac', '.m4a',
+      // Archives
+      '.zip', '.tar', '.gz', '.rar', '.7z', '.bz2', '.xz',
+      // Documents
+      '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+      // Executables
+      '.exe', '.dmg', '.app', '.deb', '.rpm', '.msi',
+      // Fonts
+      '.ttf', '.woff', '.woff2', '.eot', '.otf',
+      // Other binary formats
+      '.bin', '.dat', '.db', '.sqlite', '.sqlite3'
+    ];
+    return binaryExtensions.includes(ext);
+  }
+
+  private containsBinaryContent(content: string): boolean {
+    // Check for null bytes (common in binary files)
+    if (content.includes('\0')) {
+      return true;
+    }
+
+    // Check for high ratio of non-printable characters
+    const nonPrintableCount = (content.match(/[\x00-\x08\x0E-\x1F\x7F-\xFF]/g) || []).length;
+    const ratio = nonPrintableCount / content.length;
+
+    // If more than 30% of characters are non-printable, consider it binary
+    return ratio > 0.3;
   }
 
   private shouldIncludeInStructure(itemName: string, itemRelativePath: string): boolean {
