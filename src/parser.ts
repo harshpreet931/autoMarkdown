@@ -143,8 +143,28 @@ export class CodebaseParser {
   }
 
   private shouldIncludeInStructure(itemName: string): boolean {
-    const excludedItems = ['.git', 'node_modules', '.DS_Store', 'dist', 'build', '__pycache__'];
-    return !excludedItems.includes(itemName) && !itemName.startsWith('.');
+    // Use the same exclusion patterns as file content filtering
+    const excluded = this.options.excludePatterns!.some(pattern => {
+      // Handle different pattern types
+      if (pattern.includes('**')) {
+        // Skip complex glob patterns like node_modules/** - these are handled by glob itself
+        return false;
+      } else if (pattern.startsWith('*.')) {
+        // Handle file extension patterns like *.png
+        const extension = pattern.slice(1); // Remove the *
+        return itemName.endsWith(extension);
+      } else if (pattern.includes('*')) {
+        // Handle simple wildcard patterns
+        const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+        return regex.test(itemName);
+      } else {
+        // Exact match for specific files
+        return itemName === pattern || itemName === path.basename(pattern);
+      }
+    });
+
+    // Also exclude hidden files (starting with .) unless explicitly included
+    return !excluded && (!itemName.startsWith('.') || (this.options.includeHidden || false));
   }
 
   private detectLanguage(filePath: string): string {
