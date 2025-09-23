@@ -6,7 +6,7 @@ from .parser import CodebaseParser
 from .converter import MarkdownConverter
 from .automarkdown import AutoMarkdown
 
-__version__ = "1.0.0"
+__version__ = "1.0.2"
 __author__ = "harshpreet931"
 __email__ = ""
 

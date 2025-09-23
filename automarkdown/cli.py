@@ -13,7 +13,7 @@ from .types import ConversionOptions
 init()
 
 @click.group()
-@click.version_option(version="1.0.0")
+@click.version_option(version="1.0.2")
 def cli():
     """AutoMarkdown - Intelligently convert codebases into markdown for LLMs"""
     pass

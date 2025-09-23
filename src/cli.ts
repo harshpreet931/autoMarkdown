@@ -11,7 +11,7 @@ const program = new Command();
 program
   .name('automarkdown')
   .description('Intelligently convert codebases into markdown for LLMs')
-  .version('1.0.0');
+  .version('1.0.2');
 
 program
   .argument('<path>', 'Path to the codebase to convert')
