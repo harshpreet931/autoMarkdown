@@ -114,9 +114,9 @@ export class CodebaseParser {
           const items = await fs.promises.readdir(currentPath);
           
           for (const item of items) {
-            if (this.shouldIncludeInStructure(item)) {
+            const itemRelativePath = path.join(relativePath, item);
+            if (this.shouldIncludeInStructure(item, itemRelativePath)) {
               const itemPath = path.join(currentPath, item);
-              const itemRelativePath = path.join(relativePath, item);
               const child = await buildStructure(itemPath, itemRelativePath);
               children.push(child);
             }
@@ -142,13 +142,14 @@ export class CodebaseParser {
     return buildStructure(projectPath);
   }
 
-  private shouldIncludeInStructure(itemName: string): boolean {
+  private shouldIncludeInStructure(itemName: string, itemRelativePath: string): boolean {
     // Use the same exclusion patterns as file content filtering
     const excluded = this.options.excludePatterns!.some(pattern => {
       // Handle different pattern types
       if (pattern.includes('**')) {
-        // Skip complex glob patterns like node_modules/** - these are handled by glob itself
-        return false;
+        // Handle directory patterns like node_modules/** or dist/**
+        const basePattern = pattern.replace('/**', '');
+        return itemRelativePath.startsWith(basePattern + '/') || itemName === basePattern;
       } else if (pattern.startsWith('*.')) {
         // Handle file extension patterns like *.png
         const extension = pattern.slice(1); // Remove the *
