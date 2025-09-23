@@ -1,0 +1,48 @@
+{
+  "name": "automarkdown",
+  "version": "1.0.0",
+  "description": "Intelligently convert codebases into markdown for LLMs to process and provide optimal insights",
+  "main": "dist/index.js",
+  "bin": {
+    "automarkdown": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/cli.js",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "markdown",
+    "codebase",
+    "llm",
+    "converter",
+    "documentation",
+    "automation"
+  ],
+  "author": "harshpreet931",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/harshpreet931/autoMarkdown.git"
+  },
+  "bugs": {
+    "url": "https://github.com/harshpreet931/autoMarkdown/issues"
+  },
+  "homepage": "https://github.com/harshpreet931/autoMarkdown#readme",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "jest": "^29.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "commander": "^11.0.0",
+    "glob": "^10.0.0",
+    "chalk": "^5.0.0"
+  }
+}
