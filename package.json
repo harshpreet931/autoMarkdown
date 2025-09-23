@@ -25,7 +25,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/harshpreet931/autoMarkdown.git"
+    "url": "git+https://github.com/harshpreet931/autoMarkdown.git"
   },
   "bugs": {
     "url": "https://github.com/harshpreet931/autoMarkdown/issues"
