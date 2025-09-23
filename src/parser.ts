@@ -7,15 +7,43 @@ export class CodebaseParser {
   private options: ConversionOptions;
 
   constructor(options: ConversionOptions = {}) {
+    // Default exclude patterns
+    const defaultExcludePatterns = [
+      'node_modules/**',
+      '.git/**',
+      'dist/**',
+      'build/**',
+      'automarkdown/**',
+      '*.log',
+      // Lock files (huge and not useful for LLM analysis)
+      'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml', 'bun.lockb',
+      'Pipfile.lock', 'poetry.lock', 'Cargo.lock', 'composer.lock',
+      'Gemfile.lock', 'go.sum', 'mix.lock',
+      // Images and media
+      '*.png', '*.jpg', '*.jpeg', '*.gif', '*.bmp', '*.tiff', '*.webp', '*.svg',
+      '*.mp4', '*.avi', '*.mov', '*.wmv', '*.flv', '*.webm',
+      '*.mp3', '*.wav', '*.ogg', '*.flac', '*.aac',
+      // Documents and archives
+      '*.pdf', '*.doc', '*.docx', '*.xls', '*.xlsx', '*.ppt', '*.pptx',
+      '*.zip', '*.tar', '*.gz', '*.rar', '*.7z',
+      // Executables and fonts
+      '*.exe', '*.dmg', '*.app', '*.deb', '*.rpm',
+      '*.ico', '*.ttf', '*.woff', '*.woff2', '*.eot'
+    ];
+
     this.options = {
       includeHidden: false,
       maxFileSize: 1024 * 1024, // 1MB
-      excludePatterns: ['node_modules/**', '.git/**', 'dist/**', 'build/**', '*.log'],
       includePatterns: ['**/*'],
       outputFormat: 'markdown',
       prioritizeFiles: ['README.md', 'package.json', 'requirements.txt', 'main.py', 'index.js'],
       includeMetadata: true,
-      ...options
+      ...options,
+      // Ensure exclude patterns are not overridden by spread - always merge with defaults
+      excludePatterns: [
+        ...defaultExcludePatterns,
+        ...(options.excludePatterns || [])
+      ]
     };
   }
 

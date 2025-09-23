@@ -3,75 +3,96 @@
 > **Intelligently convert codebases into markdown for LLMs to process and provide optimal insights**
 
 [![npm version](https://badge.fury.io/js/automarkdown.svg)](https://badge.fury.io/js/automarkdown)
-[![PyPI version](https://badge.fury.io/py/automarkdown.svg)](https://badge.fury.io/py/automarkdown)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub stars](https://img.shields.io/github/stars/harshpreet931/autoMarkdown?style=social)](https://github.com/harshpreet931/autoMarkdown)
 
-AutoMarkdown is a powerful tool that converts entire codebases into well-structured markdown documents, making it easy for Large Language Models (LLMs) to understand and analyze your code. Perfect for getting comprehensive insights, code reviews, documentation generation, and architectural analysis from AI assistants.
+AutoMarkdown is a powerful NPX tool that converts entire codebases into well-structured markdown documents, making it easy for Large Language Models (LLMs) to understand and analyze your code. Perfect for getting comprehensive insights, code reviews, documentation generation, and architectural analysis from AI assistants.
 
-## Features
+## Key Features
 
-- **Intelligent File Prioritization** - Automatically ranks files by importance (README, configs, entry points first)
-- **Project Structure Visualization** - Creates a clear tree view of your codebase
+### AI-Optimized Output
+- **Token Count Analysis** - Shows estimated tokens and LLM compatibility (GPT-5, Claude, Gemini, Grok, etc.)
+- **Smart Exclusions** - Automatically filters out binary files, lock files, and generated content
+- **LLM Recommendations** - Suggests optimal usage for different AI models
+
+### Auto-Organization
+- **Automatic Folder Creation** - Creates `automarkdown/automarkdown.md` by default
+- **Intelligent File Prioritization** - Ranks files by importance (README, configs, entry points first)
+- **Project Structure Visualization** - Creates clear tree view of your codebase
+
+### Smart Processing
 - **Language Detection** - Supports 25+ programming languages with syntax highlighting
-- **Highly Configurable** - Customize inclusion/exclusion patterns, file size limits, and more
-- **Dual Platform Support** - Available as both NPX (Node.js) and pip (Python) packages
-- **Metadata Rich** - Includes file statistics, language info, and importance scores
+- **Advanced Exclusions** - Filters lock files, images, videos, documents, fonts, and executables
 - **Gitignore Aware** - Respects your .gitignore files automatically
-- **Multiple Output Formats** - Markdown or JSON output options
+- **Configurable Limits** - Custom file size limits and inclusion/exclusion patterns
+
+### Rich Output
+- **Multiple Formats** - Markdown or JSON output options
+- **Metadata Rich** - File statistics, language info, and importance scores
+- **Token Estimates** - Real-time compatibility checking with popular LLMs
 
 ## Quick Start
 
-### NPX (Node.js)
+### Simple Usage (Auto-creates `automarkdown/automarkdown.md`)
 
 ```bash
-# Convert current directory
+# Convert current directory - creates automarkdown/automarkdown.md automatically
 npx automarkdown .
 
 # Convert specific project
 npx automarkdown /path/to/project
 
-# Save to file
-npx automarkdown . -o my-project-docs.md
-
-# JSON output
-npx automarkdown . -f json -o project-data.json
+# Get help and see all options
+npx automarkdown --help
 ```
 
-### pip (Python)
+### Advanced Usage
 
 ```bash
-# Install
-pip install automarkdown
+# Save to custom file
+npx automarkdown . -o my-project-docs.md
 
-# Convert current directory
-automarkdown convert .
+# JSON output for programmatic use
+npx automarkdown . -f json -o project-data.json
 
-# Convert specific project
-automarkdown convert /path/to/project
+# Include hidden files
+npx automarkdown . --include-hidden
 
-# Save to file
-automarkdown convert . -o my-project-docs.md
+# Custom exclusions (beyond smart defaults)
+npx automarkdown . --exclude "*.test.js,coverage/**"
+```
 
-# JSON output
-automarkdown convert . -f json -o project-data.json
+### NEW: Token Analysis Output
+
+```
+Token Analysis:
+   Estimated tokens: 11,782
+
+Compatible LLMs (11):
+   • Gemini 2.5 Pro (Google) - 1% of limit
+   • GPT-5 (OpenAI) - 3% of limit
+   • Claude Opus 4.1 (Anthropic) - 6% of limit
+   • Claude Sonnet 4 (Anthropic) - 6% of limit
+   • Grok-4 (xAI) - 6% of limit
+   • ...and 6 more
+
+Recommendations:
+   Good compatibility with most popular LLMs!
+   Small codebase - optimal for all LLMs
 ```
 
 ## Installation
 
-### Node.js/NPX
+### NPX (Recommended - No Installation Required)
 ```bash
-# No installation needed - use directly with npx
+# Use directly without installation
 npx automarkdown --help
 
-# Or install globally
+# Or install globally for faster subsequent runs
 npm install -g automarkdown
 ```
 
-### Python/pip
-```bash
-pip install automarkdown
-```
+**Requirements:** Node.js 18+ (most systems have this already)
 
 ## Usage Examples
 
@@ -136,65 +157,41 @@ Create `automarkdown.config.json`:
 }
 ```
 
-## Perfect for LLMs
+## What Makes AutoMarkdown Special
 
-AutoMarkdown creates markdown that's optimized for Large Language Models:
+### AI-First Design
+AutoMarkdown is built specifically for LLM consumption with token-aware output, smart filtering, and compatibility analysis across all major AI models.
 
-### Structured Output
-- Clear section headers and navigation
-- Table of contents with file links
-- Hierarchical project structure
-- Metadata for each file
+### Zero Configuration
+Works out of the box with intelligent defaults. Just run `npx automarkdown .` and get perfectly formatted markdown in seconds.
 
-### Intelligence Built-in
-- Files ordered by importance
-- Smart language detection
-- Automatic gitignore respect
-- Configurable exclusion patterns
-
-### Rich Context
-- Project statistics and summary
-- File importance scores
-- Language distribution
-- Size and complexity metrics
+### Production Ready
+Handles codebases of any size with automatic file filtering, importance ranking, and clean organizational structure.
 
 ## CLI Options
 
-### NPX Version
 ```
 automarkdown <path> [options]
 
 Options:
-  -o, --output <file>     Output file path (default: stdout)
+  -o, --output <file>     Output file path (default: auto-creates automarkdown/automarkdown.md)
   -f, --format <format>   Output format: markdown or json (default: markdown)
   --include-hidden        Include hidden files and directories
   --max-size <size>       Maximum file size in bytes (default: 1048576)
-  --exclude <patterns>    Comma-separated exclude patterns
+  --exclude <patterns>    Comma-separated exclude patterns (beyond smart defaults)
   --include <patterns>    Comma-separated include patterns
   --no-metadata          Exclude file metadata from output
 
-Commands:
-  init                    Create configuration file
-  examples               Show usage examples
-```
-
-### Python Version
-```
-automarkdown convert <path> [options]
-
-Options:
-  -o, --output PATH       Output file path (default: stdout)
-  -f, --format [markdown|json]  Output format (default: markdown)
-  --include-hidden        Include hidden files and directories
-  --max-size INTEGER      Maximum file size in bytes (default: 1048576)
-  --exclude TEXT          Comma-separated exclude patterns
-  --include TEXT          Comma-separated include patterns
-  --no-metadata          Exclude file metadata from output
+Smart Defaults Excluded:
+  Lock files: package-lock.json, yarn.lock, Cargo.lock, etc.
+  Binary files: images, videos, fonts, executables, archives
+  Generated: node_modules, dist, build, .git, automarkdown folders
 
 Commands:
   init                    Create configuration file
   examples               Show usage examples
 ```
+
 
 ## Example Output
 
@@ -306,7 +303,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - [GitHub Repository](https://github.com/harshpreet931/autoMarkdown)
 - [NPM Package](https://www.npmjs.com/package/automarkdown)
-- [PyPI Package](https://pypi.org/project/automarkdown/)
 - [Issue Tracker](https://github.com/harshpreet931/autoMarkdown/issues)
 
 ---

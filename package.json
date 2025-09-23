@@ -1,6 +1,6 @@
 {
   "name": "automarkdown",
-  "version": "1.0.2",
+  "version": "2.0.0",
   "description": "Intelligently convert codebases into markdown for LLMs to process and provide optimal insights",
   "main": "dist/index.js",
   "bin": {

@@ -5,13 +5,14 @@ import * as fs from 'fs';
 import * as path from 'path';
 import chalk from 'chalk';
 import AutoMarkdown from './index';
+import { TokenCounter } from './tokenizer';
 
 const program = new Command();
 
 program
   .name('automarkdown')
   .description('Intelligently convert codebases into markdown for LLMs')
-  .version('1.0.2');
+  .version('2.0.0');
 
 program
   .argument('<path>', 'Path to the codebase to convert')
@@ -61,17 +62,34 @@ program
 
       // Output handling
       if (options.output) {
+        // Ensure directory exists
+        const outputDir = path.dirname(options.output);
+        if (!fs.existsSync(outputDir)) {
+          await fs.promises.mkdir(outputDir, { recursive: true });
+        }
         await fs.promises.writeFile(options.output, output, 'utf-8');
         console.log(chalk.green(`Output saved to: ${options.output}`));
       } else {
-        console.log('\n' + chalk.gray('--- OUTPUT ---') + '\n');
-        console.log(output);
+        // Auto-create automarkdown folder and file
+        const autoOutputDir = path.join(projectPath, 'automarkdown');
+        const autoOutputFile = path.join(autoOutputDir, 'automarkdown.md');
+        
+        if (!fs.existsSync(autoOutputDir)) {
+          await fs.promises.mkdir(autoOutputDir, { recursive: true });
+        }
+        
+        await fs.promises.writeFile(autoOutputFile, output, 'utf-8');
+        console.log(chalk.green(`Output automatically saved to: ${autoOutputFile}`));
       }
 
-      // Stats
+      // Stats and Token Analysis
       const lines = output.split('\n').length;
       const size = Buffer.byteLength(output, 'utf-8');
       console.log(chalk.blue(`\nGenerated ${lines} lines (${(size / 1024).toFixed(2)} KB)`));
+      
+      // Token analysis
+      const tokenAnalysis = TokenCounter.analyzeTokenUsage(output);
+      console.log(chalk.cyan(TokenCounter.formatTokenAnalysis(tokenAnalysis)));
       
     } catch (error) {
       console.error(chalk.red('Error:'), error instanceof Error ? error.message : error);
