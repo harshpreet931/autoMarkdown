@@ -1,10 +1,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { glob } from 'glob';
+import ignore from 'ignore';
 import { FileInfo, ParsedProject, ProjectStructure, ConversionOptions } from './types';
 
 export class CodebaseParser {
   private options: ConversionOptions;
+  private gitIgnore: ReturnType<typeof ignore> | null = null;
 
   constructor(options: ConversionOptions = {}) {
     // Default exclude patterns
@@ -48,6 +50,9 @@ export class CodebaseParser {
   }
 
   async parseProject(projectPath: string): Promise<ParsedProject> {
+    // Load .gitignore patterns if available
+    await this.loadGitIgnore(projectPath);
+
     const files = await this.getProjectFiles(projectPath);
     const structure = await this.buildProjectStructure(projectPath);
     const summary = this.generateProjectSummary(files, structure);
@@ -57,6 +62,18 @@ export class CodebaseParser {
       structure,
       summary
     };
+  }
+
+  private async loadGitIgnore(projectPath: string): Promise<void> {
+    const gitIgnorePath = path.join(projectPath, '.gitignore');
+
+    try {
+      const gitIgnoreContent = await fs.promises.readFile(gitIgnorePath, 'utf-8');
+      this.gitIgnore = ignore().add(gitIgnoreContent);
+    } catch (error) {
+      // .gitignore doesn't exist or can't be read - that's fine
+      this.gitIgnore = null;
+    }
   }
 
   private async getProjectFiles(projectPath: string): Promise<FileInfo[]> {
@@ -70,6 +87,11 @@ export class CodebaseParser {
       });
 
       for (const match of matches) {
+        // Check gitignore patterns first
+        if (this.gitIgnore && this.gitIgnore.ignores(match)) {
+          continue;
+        }
+
         const fullPath = path.join(projectPath, match);
         const stat = await fs.promises.stat(fullPath);
 
@@ -191,6 +213,11 @@ export class CodebaseParser {
   }
 
   private shouldIncludeInStructure(itemName: string, itemRelativePath: string): boolean {
+    // Check gitignore patterns first
+    if (this.gitIgnore && this.gitIgnore.ignores(itemRelativePath)) {
+      return false;
+    }
+
     // Use the same exclusion patterns as file content filtering
     const excluded = this.options.excludePatterns!.some(pattern => {
       // Handle different pattern types
