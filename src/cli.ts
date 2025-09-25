@@ -13,8 +13,8 @@ const program = new Command();
 
 program
   .name('automarkdown')
-  .description('Intelligently convert codebases into markdown for LLMs')
-  .version('2.0.2');
+  .description('Intelligently convert codebases into markdown for LLMs with viral social features')
+  .version('3.0.0');
 
 program
   .argument('<path>', 'Path to the codebase to convert')
@@ -32,7 +32,7 @@ program
     
     try {
       // Show welcome banner
-      if (!options.noSocial) {
+      if (options.social !== false) {
         console.log(Banner.generateWelcomeBanner());
       }
 
@@ -51,7 +51,7 @@ program
       // Get project name
       const projectName = path.basename(path.resolve(projectPath));
       
-      if (!options.noSocial) {
+      if (options.social !== false) {
         console.log(chalk.blue('🔍 Analyzing codebase...'));
       } else {
         console.log(chalk.blue('Analyzing codebase...'));
@@ -79,7 +79,7 @@ program
       let projectStats: ProjectStats | null = null;
       let personality: CodePersonality | null = null;
       
-      if (!options.noSocial) {
+      if (options.social !== false) {
         // This is a bit of a hack - we'll need to parse the project first to get stats
         try {
           const tempProject = await autoMarkdown.parseProject(projectPath);
@@ -145,7 +145,7 @@ program
         console.log(chalk.green(`Output automatically saved to: ${autoOutputFile}`));
         
         // Save badges and social content if social features are enabled
-        if (!options.noSocial && projectStats) {
+        if (options.social !== false && projectStats) {
           const badgeContent = SocialFeatures.generateProjectBadge(projectStats);
           const badgeFile = path.join(autoOutputDir, 'badges.md');
           await fs.promises.writeFile(badgeFile, badgeContent, 'utf-8');
@@ -159,7 +159,7 @@ program
       const processingTime = (Date.now() - startTime) / 1000;
       
       // Show completion banner
-      if (!options.noSocial) {
+      if (options.social !== false) {
         console.log(Banner.generateCompletionBanner({
           lines,
           sizeKb: size / 1024,
@@ -174,7 +174,7 @@ program
       console.log(chalk.cyan(TokenCounter.formatTokenAnalysis(tokenAnalysis)));
       
       // Social sharing content
-      if ((options.share || !options.noSocial) && projectStats) {
+      if ((options.share || options.social !== false) && projectStats) {
         console.log(Banner.generateSocialShareText(projectName, projectStats));
       }
       
@@ -364,6 +364,15 @@ program
       const personalityContent = SocialFeatures.generatePlainPersonalityReport(personality);
       await fs.promises.writeFile(path.join(outputDir, 'personality.txt'), personalityContent, 'utf-8');
 
+      // QR Code for GitHub repo (if detected)
+      const gitStats = await SocialFeatures.detectGitStats(projectPath);
+      let hasQRCode = false;
+      if (gitStats.remoteUrl && gitStats.remoteUrl.includes('github.com')) {
+        const qrCode = SocialFeatures.generateASCIIQRCode(gitStats.remoteUrl);
+        await fs.promises.writeFile(path.join(outputDir, 'qr-code.txt'), qrCode, 'utf-8');
+        hasQRCode = true;
+      }
+
       console.log(chalk.green.bold('✅ Viral content generated!'));
       console.log(chalk.cyan(`📁 Files saved to: ${outputDir}`));
       console.log();
@@ -372,10 +381,80 @@ program
       console.log(`   • Social media: ${chalk.gray('social-share.txt')}`); 
       console.log(`   • README badges: ${chalk.gray('badges.md')}`);
       console.log(`   • Personality: ${chalk.gray('personality.txt')}`);
+      if (hasQRCode) {
+        console.log(`   • QR Code: ${chalk.gray('qr-code.txt')}`);
+      }
       console.log();
       
       // Show preview
-      console.log(shareContent);
+      console.log(Banner.generateSocialShareText(projectName, projectStats));
+
+    } catch (error) {
+      console.error(chalk.red('Error:'), error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('meme')
+  .description('Generate a fun meme about your coding style')
+  .argument('<path>', 'Path to analyze')
+  .action(async (projectPath: string) => {
+    try {
+      if (!fs.existsSync(projectPath)) {
+        console.error(chalk.red(`Error: Path "${projectPath}" does not exist`));
+        process.exit(1);
+      }
+
+      const autoMarkdown = new AutoMarkdown();
+      const project = await autoMarkdown.parseProject(projectPath);
+      const projectStats: ProjectStats = {
+        files: project.files.length,
+        languages: [...new Set(project.files.map(f => f.language))],
+        size: project.files.reduce((sum, f) => sum + f.size, 0),
+        tokens: TokenCounter.estimateTokens(JSON.stringify(project))
+      };
+
+      const personality = SocialFeatures.analyzeCodePersonality(project.files, projectStats);
+      
+      // Generate fun meme-style content
+      const memes = {
+        'Minimalist': '🎯 "Write less, do more" - You probably',
+        'Verbose': '📚 "Comments? We need MORE comments!" - You',
+        'Balanced': '⚖️ "Perfectly balanced, as all code should be" - Thanos (probably you)',
+        'Experimental': '🧪 "It works on my machine... in production... sometimes"'
+      };
+
+      const complexityMemes = {
+        'Simple': '🌱 "It just works™"',
+        'Moderate': '🌿 "It mostly works"', 
+        'Complex': '🌳 "It works if you know the sacred rituals"',
+        'Enterprise': '🏢 "It works... according to the 47-page documentation"'
+      };
+
+      console.log(chalk.yellow.bold('🎭 YOUR CODING MEME PROFILE:\n'));
+      console.log(chalk.cyan('Style Meme:'));
+      console.log(`   ${memes[personality.style]}\n`);
+      console.log(chalk.green('Complexity Meme:'));
+      console.log(`   ${complexityMemes[personality.complexity]}\n`);
+      
+      // Fun facts
+      const funFacts = [];
+      if (projectStats.languages.includes('JavaScript')) funFacts.push('🍕 Probably orders pizza while debugging async issues');
+      if (projectStats.languages.includes('Python')) funFacts.push('🐍 Believes in "batteries included" philosophy');
+      if (projectStats.languages.includes('Rust')) funFacts.push('🦀 Fights the borrow checker and usually loses');
+      if (projectStats.languages.includes('TypeScript')) funFacts.push('💎 Types everything, even their grocery lists');
+      if (projectStats.files > 100) funFacts.push('🏗️ Architect of digital empires');
+      if (projectStats.size < 10000) funFacts.push('⚡ Believes in the power of minimalism');
+
+      if (funFacts.length > 0) {
+        console.log(chalk.magenta('Fun Coding Facts:'));
+        funFacts.slice(0, 3).forEach(fact => {
+          console.log(`   ${fact}`);
+        });
+      }
+
+      console.log(chalk.gray('\n💡 Share this meme with: npx automarkdown viral .'));
 
     } catch (error) {
       console.error(chalk.red('Error:'), error instanceof Error ? error.message : error);

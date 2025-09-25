@@ -1,6 +1,6 @@
 Just converted "autoMarkdown" to LLM-ready markdown! 🚀
 
-📊 Stats: 13 files, ~17,077 tokens
+📊 Stats: 13 files, ~19,298 tokens
 💻 Languages: 📄 json 📄 markdown 🔷 typescript 📄 text
 
 Try it yourself: npx automarkdown .

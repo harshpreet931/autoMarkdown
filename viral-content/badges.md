@@ -1,5 +1,5 @@
 ![AutoMarkdown](https://img.shields.io/badge/AutoMarkdown-analyzed-brightgreen)
 ![Files](https://img.shields.io/badge/Files-13-blue)
-![Languages](https://img.shields.io/badge/Languages-json|markdown|typescript-orange)  
-![Size](https://img.shields.io/badge/Size-56.8KB-yellow)
-![Tokens](https://img.shields.io/badge/Tokens-~17.1K-purple)
+![Languages](https://img.shields.io/badge/Languages-json%7Cmarkdown%7Ctypescript-orange)  
+![Size](https://img.shields.io/badge/Size-65.4KB-yellow)
+![Tokens](https://img.shields.io/badge/Tokens-~19.3K-purple)

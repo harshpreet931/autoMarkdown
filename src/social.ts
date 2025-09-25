@@ -220,12 +220,30 @@ export class SocialFeatures {
     const size = `${(stats.size / 1024).toFixed(1)}KB`;
     const tokens = `~${(stats.tokens / 1000).toFixed(1)}K`;
     
-    return `
-![AutoMarkdown](https://img.shields.io/badge/AutoMarkdown-analyzed-brightgreen)
+    return `![AutoMarkdown](https://img.shields.io/badge/AutoMarkdown-analyzed-brightgreen)
 ![Files](https://img.shields.io/badge/Files-${stats.files}-blue)
-![Languages](https://img.shields.io/badge/Languages-${languages}-orange)  
+![Languages](https://img.shields.io/badge/Languages-${languages.replace(/\|/g, '%7C')}-orange)  
 ![Size](https://img.shields.io/badge/Size-${size}-yellow)
-![Tokens](https://img.shields.io/badge/Tokens-${tokens}-purple)
-    `.trim();
+![Tokens](https://img.shields.io/badge/Tokens-${tokens}-purple)`;
+  }
+
+  static generateASCIIQRCode(url: string): string {
+    // Simple ASCII QR-code-like pattern for sharing
+    // In a real implementation, you'd use a proper QR code library
+    return `
+┌─────────────────────────────────┐
+│ ▓▓▓▓▓ ▓   ▓ ▓   ▓▓▓ ▓▓▓▓▓ │
+│ ▓   ▓ ▓▓▓ ▓▓▓▓▓ ▓▓▓ ▓   ▓ │
+│ ▓ ▓▓▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓▓▓ │
+│ ▓ ▓▓▓   ▓▓▓   ▓ ▓▓▓ ▓ ▓▓▓ │
+│ ▓   ▓ ▓▓▓ ▓ ▓▓▓▓▓ ▓ ▓   ▓ │
+│ ▓▓▓▓▓ ▓ ▓ ▓ ▓ ▓ ▓▓▓ ▓▓▓▓▓ │
+│       ▓▓▓▓▓▓▓▓▓▓▓▓▓       │
+│ ▓▓▓ ▓   ▓▓▓ ▓ ▓▓▓▓▓ ▓ ▓▓▓ │
+│ ▓ ▓▓▓▓▓ ▓ ▓▓▓ ▓ ▓ ▓▓▓▓▓ ▓ │
+│ ▓   ▓ ▓▓▓▓▓ ▓ ▓▓▓ ▓▓▓ ▓▓▓ │
+│ ▓▓▓▓▓ ▓ ▓ ▓▓▓▓▓ ▓ ▓ ▓ ▓ ▓ │
+└─────────────────────────────────┘
+📱 Scan or visit: ${url}`;
   }
 }

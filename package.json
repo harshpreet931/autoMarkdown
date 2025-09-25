@@ -1,7 +1,7 @@
 {
   "name": "automarkdown",
-  "version": "2.0.2",
-  "description": "Intelligently convert codebases into markdown for LLMs to process and provide optimal insights",
+  "version": "3.0.0",
+  "description": "Intelligently convert codebases into markdown for LLMs with viral social features and personality analysis",
   "main": "dist/index.js",
   "bin": {
     "automarkdown": "dist/cli.js"
@@ -15,11 +15,19 @@
   },
   "keywords": [
     "markdown",
-    "codebase",
+    "codebase", 
     "llm",
     "converter",
     "documentation",
-    "automation"
+    "automation",
+    "viral",
+    "social", 
+    "personality-analysis",
+    "achievements",
+    "sharing",
+    "developer-tools",
+    "ascii-art",
+    "fun"
   ],
   "author": "harshpreet931",
   "license": "MIT",
