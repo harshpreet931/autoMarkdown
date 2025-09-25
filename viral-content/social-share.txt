@@ -1,0 +1,8 @@
+Just converted "autoMarkdown" to LLM-ready markdown! 🚀
+
+📊 Stats: 13 files, ~17,077 tokens
+💻 Languages: 📄 json 📄 markdown 🔷 typescript 📄 text
+
+Try it yourself: npx automarkdown .
+
+#AutoMarkdown #LLM #CodeAnalysis #Developer

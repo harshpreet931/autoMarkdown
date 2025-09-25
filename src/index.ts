@@ -23,6 +23,10 @@ export class AutoMarkdown {
     const project = await this.parser.parseProject(projectPath);
     return this.converter.convertToJson(project);
   }
+
+  async parseProject(projectPath: string) {
+    return await this.parser.parseProject(projectPath);
+  }
 }
 
 export default AutoMarkdown;
