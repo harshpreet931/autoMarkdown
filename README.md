@@ -1,4 +1,5 @@
 # automarkdown
+![AutoMarkdown](./assets/automarkdown.png)
 
 Convert any codebase into LLM-ready markdown.
 
