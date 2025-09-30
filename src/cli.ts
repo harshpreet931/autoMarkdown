@@ -12,7 +12,7 @@ const program = new Command();
 program
   .name('automarkdown')
   .description('Intelligently convert codebases into markdown for LLMs')
-  .version('2.0.2');
+  .version('2.0.3');
 
 program
   .argument('<path>', 'Path to the codebase to convert')
@@ -23,6 +23,7 @@ program
   .option('--exclude <patterns>', 'Comma-separated exclude patterns', 'node_modules/**,.git/**,dist/**,build/**')
   .option('--include <patterns>', 'Comma-separated include patterns', '**/*')
   .option('--no-metadata', 'Exclude file metadata from output')
+  .option('--ast-analysis', 'Enable AST-based importance scoring for better file prioritization')
   .action(async (projectPath: string, options) => {
     try {
       // Validate input path
@@ -39,6 +40,10 @@ program
 
       console.log(chalk.blue('Analyzing codebase...'));
 
+      if (options.astAnalysis) {
+        console.log(chalk.cyan('AST analysis enabled - this may take longer but provides better file prioritization'));
+      }
+
       // Parse options
       const maxFileSize = parseInt(options.maxSize);
       if (isNaN(maxFileSize) || maxFileSize <= 0) {
@@ -52,7 +57,8 @@ program
         excludePatterns: options.exclude.split(',').map((p: string) => p.trim()),
         includePatterns: options.include.split(',').map((p: string) => p.trim()),
         outputFormat: options.format as 'markdown' | 'json',
-        includeMetadata: options.metadata !== false
+        includeMetadata: options.metadata !== false,
+        useASTAnalysis: options.astAnalysis
       };
 
       const autoMarkdown = new AutoMarkdown(conversionOptions);
@@ -164,6 +170,10 @@ program
       {
         title: 'Larger file limit',
         command: 'automarkdown ./my-project --max-size 2097152'
+      },
+      {
+        title: 'Enable AST analysis for better file prioritization',
+        command: 'automarkdown ./my-project --ast-analysis'
       }
     ];
 

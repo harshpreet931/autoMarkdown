@@ -126,7 +126,7 @@ ${this.renderStructureTree(structure, 0)}
       return '';
     }
 
-    return `**Language**: ${file.language} | **Size**: ${file.size} bytes | **Importance**: ${file.importance.toFixed(1)}/10`;
+    return `**Language**: ${file.language} | **Size**: ${file.size} bytes | **Importance**: ${file.importance.toFixed(1)}`;
   }
 
   private generateFooter(): string {
