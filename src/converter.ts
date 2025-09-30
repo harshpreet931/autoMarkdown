@@ -1,4 +1,5 @@
 import { ParsedProject, FileInfo, ProjectStructure, ConversionOptions } from './types';
+import { TokenCounter } from './tokenizer';
 
 export class MarkdownConverter {
   private options: ConversionOptions;
@@ -8,22 +9,25 @@ export class MarkdownConverter {
   }
 
   convertToMarkdown(project: ParsedProject): string {
+    // Apply token-aware file filtering
+    const filteredProject = this.applyTokenAwareFiltering(project);
+
     const sections: string[] = [];
 
     // Header
-    sections.push(this.generateHeader(project));
+    sections.push(this.generateHeader(filteredProject));
 
     // Table of Contents
-    sections.push(this.generateTableOfContents(project));
+    sections.push(this.generateTableOfContents(filteredProject));
 
     // Project Summary
-    sections.push(this.generateProjectSummary(project));
+    sections.push(this.generateProjectSummary(filteredProject));
 
     // Project Structure
-    sections.push(this.generateProjectStructure(project.structure));
+    sections.push(this.generateProjectStructure(filteredProject.structure));
 
     // File Contents
-    sections.push(this.generateFileContents(project.files));
+    sections.push(this.generateFileContents(filteredProject.files));
 
     // Footer
     sections.push(this.generateFooter());
@@ -144,6 +148,60 @@ ${this.renderStructureTree(structure, 0)}
   }
 
   convertToJson(project: ParsedProject): string {
-    return JSON.stringify(project, null, 2);
+    // Apply token-aware filtering for JSON too
+    const filteredProject = this.applyTokenAwareFiltering(project);
+    return JSON.stringify(filteredProject, null, 2);
+  }
+
+  private applyTokenAwareFiltering(project: ParsedProject): ParsedProject {
+    const maxTokens = 150000; // Conservative limit for most LLMs
+    let currentTokens = 0;
+    const includedFiles: FileInfo[] = [];
+
+    // Estimate tokens for static content (headers, structure, etc.)
+    const staticContent = this.estimateStaticTokens(project);
+    currentTokens += staticContent;
+
+    // Sort files by importance and include until we hit token limit
+    const sortedFiles = [...project.files].sort((a, b) => b.importance - a.importance);
+
+    for (const file of sortedFiles) {
+      const fileTokens = this.estimateFileTokens(file);
+
+      if (currentTokens + fileTokens <= maxTokens) {
+        includedFiles.push(file);
+        currentTokens += fileTokens;
+      } else {
+        // Stop including files to stay within token limit
+        break;
+      }
+    }
+
+    return {
+      ...project,
+      files: includedFiles,
+      summary: this.updateSummaryWithFiltering(project.summary, includedFiles.length, project.files.length)
+    };
+  }
+
+  private estimateStaticTokens(project: ParsedProject): number {
+    // Rough estimate for headers, structure, TOC, etc.
+    const structureSize = JSON.stringify(project.structure).length;
+    return Math.ceil((structureSize + 2000) / 4); // ~4 chars per token
+  }
+
+  private estimateFileTokens(file: FileInfo): number {
+    // Estimate tokens for file content + metadata
+    const contentTokens = Math.ceil(file.content.length / 4);
+    const metadataTokens = 50; // File headers, language tags, etc.
+    return contentTokens + metadataTokens;
+  }
+
+  private updateSummaryWithFiltering(originalSummary: string, includedFiles: number, totalFiles: number): string {
+    if (includedFiles === totalFiles) {
+      return originalSummary;
+    }
+
+    return `${originalSummary} Showing ${includedFiles} of ${totalFiles} files (optimized for token limits).`;
   }
 }

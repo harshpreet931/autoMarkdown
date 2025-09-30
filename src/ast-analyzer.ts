@@ -12,6 +12,11 @@ export interface ASTMetrics {
   complexity: number;
   dependencies: string[];
   exports: string[];
+  frameworks: string[];
+  isEntryPoint: boolean;
+  isTestFile: boolean;
+  isConfigFile: boolean;
+  publicMethods: number;
 }
 
 export interface DependencyGraph {
@@ -23,7 +28,17 @@ export interface DependencyGraph {
 }
 
 export class ASTAnalyzer {
+  private astCache = new Map<string, ASTMetrics>();
+
   async analyzeFile(filePath: string, content: string, language: string): Promise<ASTMetrics> {
+    // Create cache key from file path and content hash
+    const contentHash = this.hashContent(content);
+    const cacheKey = `${filePath}:${contentHash}`;
+
+    // Check cache first
+    if (this.astCache.has(cacheKey)) {
+      return this.astCache.get(cacheKey)!;
+    }
     const metrics: ASTMetrics = {
       exportCount: 0,
       importCount: 0,
@@ -33,26 +48,44 @@ export class ASTAnalyzer {
       typeCount: 0,
       complexity: 0,
       dependencies: [],
-      exports: []
+      exports: [],
+      frameworks: [],
+      isEntryPoint: false,
+      isTestFile: false,
+      isConfigFile: false,
+      publicMethods: 0
     };
+
+    // Detect file characteristics
+    this.detectFileCharacteristics(filePath, content, metrics);
+
+    let result: ASTMetrics;
 
     try {
       switch (language) {
         case 'typescript':
         case 'tsx':
-          return this.analyzeTypeScript(content, metrics);
+          result = this.analyzeTypeScript(content, metrics);
+          break;
         case 'javascript':
         case 'jsx':
-          return this.analyzeJavaScript(content, metrics);
+          result = this.analyzeJavaScript(content, metrics);
+          break;
         case 'python':
-          return this.analyzePython(content, metrics);
+          result = this.analyzePython(content, metrics);
+          break;
         default:
-          return this.analyzeGeneric(content, metrics);
+          result = this.analyzeGeneric(content, metrics);
+          break;
       }
     } catch (error) {
-      // If AST parsing fails, fall back to simple heuristics
-      return this.analyzeGeneric(content, metrics);
+      // Silent fallback to heuristic analysis
+      result = this.analyzeGeneric(content, metrics);
     }
+
+    // Cache the result
+    this.astCache.set(cacheKey, result);
+    return result;
   }
 
   private analyzeTypeScript(content: string, metrics: ASTMetrics): ASTMetrics {
@@ -67,7 +100,7 @@ export class ASTAnalyzer {
 
       this.walkTypeScriptAST(ast, metrics);
     } catch (error) {
-      // Fall back to regex analysis if parsing fails
+      // Silent fallback to regex analysis
       return this.analyzeGeneric(content, metrics);
     }
 
@@ -167,6 +200,7 @@ export class ASTAnalyzer {
 
       this.walkJavaScriptAST(ast, metrics);
     } catch (error) {
+      // Silent fallback to generic analysis
       return this.analyzeGeneric(content, metrics);
     }
 
@@ -458,25 +492,40 @@ export class ASTAnalyzer {
   calculateASTImportance(metrics: ASTMetrics, centrality: number): number {
     let score = 0;
 
-    // Export score (files that provide APIs are important)
-    score += metrics.exportCount * 3;
-    score += metrics.exports.length * 2;
+    // Core functionality (highest priority)
+    if (metrics.isEntryPoint) score += 20;
+    if (this.isMainLogic(metrics)) score += 15;
 
-    // Complexity score (moderate complexity is good, too high is bad)
-    if (metrics.complexity > 0 && metrics.complexity <= 20) {
-      score += Math.min(metrics.complexity, 10) * 0.5;
-    } else if (metrics.complexity > 20) {
-      score -= (metrics.complexity - 20) * 0.1;
+    // API surface area
+    score += metrics.exportCount * 3;
+    score += metrics.publicMethods * 2;
+
+    // Project role
+    if (this.isFrameworkCore(metrics)) score += 10;
+    if (metrics.isConfigFile) score += 8;
+
+    // Framework-specific boosts
+    metrics.frameworks.forEach(framework => {
+      if (['react', 'vue', 'angular'].includes(framework)) {
+        score += 5; // Frontend framework files are important
+      }
+      if (['express', 'fastify', 'nestjs'].includes(framework)) {
+        score += 6; // Backend framework files are critical
+      }
+    });
+
+    // Code quality indicators
+    score += Math.min(metrics.complexity / 5, 5); // Sweet spot complexity
+    score += centrality * 10; // Dependency importance
+
+    // Context-aware scoring
+    if (metrics.importCount === 0 && metrics.exportCount > 0) {
+      score += 5; // Likely a utility/library file
     }
 
-    // Code structure score
-    score += metrics.functionCount * 0.5;
-    score += metrics.classCount * 2;
-    score += metrics.interfaceCount * 3;
-    score += metrics.typeCount * 2;
-
-    // Centrality score (how connected this file is)
-    score += centrality * 5;
+    // Penalties
+    if (metrics.isTestFile) score *= 0.3;
+    if (this.isGeneratedFile(metrics)) score *= 0.1;
 
     // Import penalty (files with too many dependencies might be less important)
     if (metrics.importCount > 10) {
@@ -484,5 +533,189 @@ export class ASTAnalyzer {
     }
 
     return Math.max(score, 0);
+  }
+
+  private isMainLogic(metrics: ASTMetrics): boolean {
+    // Files with good balance of exports and complexity
+    return metrics.exportCount > 3 &&
+           metrics.functionCount > 5 &&
+           metrics.complexity > 5 &&
+           metrics.complexity < 50;
+  }
+
+  private isFrameworkCore(metrics: ASTMetrics): boolean {
+    // Files that likely contain core framework setup
+    return metrics.frameworks.length > 0 &&
+           (metrics.exportCount > 0 || metrics.functionCount > 3);
+  }
+
+  private isGeneratedFile(metrics: ASTMetrics): boolean {
+    // Simple heuristic for generated files
+    return metrics.functionCount === 0 &&
+           metrics.classCount === 0 &&
+           metrics.exportCount === 0 &&
+           metrics.complexity === 0;
+  }
+
+  private hashContent(content: string): string {
+    // Simple hash function for content caching
+    let hash = 0;
+    for (let i = 0; i < content.length; i++) {
+      const char = content.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return hash.toString();
+  }
+
+  // Clear cache when memory usage gets high
+  clearCache(): void {
+    this.astCache.clear();
+  }
+
+  private detectFileCharacteristics(filePath: string, content: string, metrics: ASTMetrics): void {
+    // Detect frameworks
+    metrics.frameworks = this.detectFrameworks(content);
+
+    // Detect entry points
+    metrics.isEntryPoint = this.isEntryPoint(filePath, content);
+
+    // Detect test files
+    metrics.isTestFile = this.isTestFile(filePath, content);
+
+    // Detect config files
+    metrics.isConfigFile = this.isConfigFile(filePath);
+  }
+
+  private detectFrameworks(content: string): string[] {
+    const frameworks: string[] = [];
+
+    // Frontend frameworks
+    if (content.includes('react') || content.includes('React') || content.includes('jsx')) {
+      frameworks.push('react');
+    }
+    if (content.includes('vue') || content.includes('Vue')) {
+      frameworks.push('vue');
+    }
+    if (content.includes('angular') || content.includes('Angular') || content.includes('@angular')) {
+      frameworks.push('angular');
+    }
+    if (content.includes('svelte') || content.includes('Svelte')) {
+      frameworks.push('svelte');
+    }
+
+    // Backend frameworks
+    if (content.includes('express') || content.includes('Express')) {
+      frameworks.push('express');
+    }
+    if (content.includes('fastify') || content.includes('Fastify')) {
+      frameworks.push('fastify');
+    }
+    if (content.includes('koa') || content.includes('Koa')) {
+      frameworks.push('koa');
+    }
+    if (content.includes('nestjs') || content.includes('@nestjs')) {
+      frameworks.push('nestjs');
+    }
+
+    // Testing frameworks
+    if (content.includes('jest') || content.includes('Jest')) {
+      frameworks.push('jest');
+    }
+    if (content.includes('mocha') || content.includes('Mocha')) {
+      frameworks.push('mocha');
+    }
+    if (content.includes('cypress') || content.includes('Cypress')) {
+      frameworks.push('cypress');
+    }
+
+    // Build tools
+    if (content.includes('webpack') || content.includes('Webpack')) {
+      frameworks.push('webpack');
+    }
+    if (content.includes('vite') || content.includes('Vite')) {
+      frameworks.push('vite');
+    }
+
+    // Databases/ORMs
+    if (content.includes('mongoose') || content.includes('Mongoose')) {
+      frameworks.push('mongoose');
+    }
+    if (content.includes('prisma') || content.includes('Prisma')) {
+      frameworks.push('prisma');
+    }
+    if (content.includes('typeorm') || content.includes('TypeORM')) {
+      frameworks.push('typeorm');
+    }
+
+    return frameworks;
+  }
+
+  private isEntryPoint(filePath: string, content: string): boolean {
+    const fileName = path.basename(filePath).toLowerCase();
+
+    // Common entry point patterns
+    if (['main.js', 'main.ts', 'index.js', 'index.ts', 'app.js', 'app.ts', 'server.js', 'server.ts'].includes(fileName)) {
+      return true;
+    }
+
+    // Check for main function or app initialization patterns
+    if (content.includes('function main(') ||
+        content.includes('const main =') ||
+        content.includes('app.listen(') ||
+        content.includes('server.listen(') ||
+        content.includes('if __name__ == "__main__"')) {
+      return true;
+    }
+
+    return false;
+  }
+
+  private isTestFile(filePath: string, content: string): boolean {
+    const fileName = path.basename(filePath).toLowerCase();
+
+    // File name patterns
+    if (fileName.includes('test') ||
+        fileName.includes('spec') ||
+        fileName.includes('.test.') ||
+        fileName.includes('.spec.') ||
+        filePath.includes('/test/') ||
+        filePath.includes('/tests/') ||
+        filePath.includes('/__tests__/')) {
+      return true;
+    }
+
+    // Content patterns
+    if (content.includes('describe(') ||
+        content.includes('it(') ||
+        content.includes('test(') ||
+        content.includes('expect(') ||
+        content.includes('assert(') ||
+        content.includes('beforeEach(') ||
+        content.includes('afterEach(')) {
+      return true;
+    }
+
+    return false;
+  }
+
+  private isConfigFile(filePath: string): boolean {
+    const fileName = path.basename(filePath).toLowerCase();
+
+    // Configuration file patterns
+    const configPatterns = [
+      /\.(config|rc)\.(js|ts|json|yml|yaml)$/,
+      /^(webpack|babel|eslint|prettier|jest|tsconfig|vite|rollup|tailwind)\.config\./,
+      /^\..*rc(\.|$)/,
+      /^(package|composer|cargo|requirements)\.json$/,
+      /^requirements\.txt$/,
+      /^Dockerfile$/,
+      /^docker-compose\./,
+      /^\.env/
+    ];
+
+    return configPatterns.some(pattern => pattern.test(fileName)) ||
+           ['webpack', 'babel', 'eslint', 'prettier', 'jest', 'tsconfig', 'vite', 'rollup'].some(tool =>
+             fileName.includes(tool));
   }
 }

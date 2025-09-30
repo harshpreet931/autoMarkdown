@@ -23,7 +23,7 @@ program
   .option('--exclude <patterns>', 'Comma-separated exclude patterns', 'node_modules/**,.git/**,dist/**,build/**')
   .option('--include <patterns>', 'Comma-separated include patterns', '**/*')
   .option('--no-metadata', 'Exclude file metadata from output')
-  .option('--ast-analysis', 'Enable AST-based importance scoring for better file prioritization')
+  .option('--no-ast-analysis', 'Disable AST-based importance scoring (not recommended)')
   .action(async (projectPath: string, options) => {
     try {
       // Validate input path
@@ -38,10 +38,10 @@ program
         process.exit(1);
       }
 
-      console.log(chalk.blue('Analyzing codebase...'));
+      console.log(chalk.blue('Analyzing code structure...'));
 
-      if (options.astAnalysis) {
-        console.log(chalk.cyan('AST analysis enabled - this may take longer but provides better file prioritization'));
+      if (options.astAnalysis === false) {
+        console.log(chalk.yellow('AST analysis disabled - file prioritization may be less accurate'));
       }
 
       // Parse options
@@ -58,17 +58,19 @@ program
         includePatterns: options.include.split(',').map((p: string) => p.trim()),
         outputFormat: options.format as 'markdown' | 'json',
         includeMetadata: options.metadata !== false,
-        useASTAnalysis: options.astAnalysis
+        useASTAnalysis: options.astAnalysis !== false
       };
 
       const autoMarkdown = new AutoMarkdown(conversionOptions);
 
-      console.log(chalk.blue('Converting to markdown...'));
+      console.log(chalk.blue('Understanding dependencies...'));
 
       let output: string;
       if (options.format === 'json') {
+        console.log(chalk.blue('Optimizing for JSON format...'));
         output = await autoMarkdown.convertToJson(projectPath);
       } else {
+        console.log(chalk.blue('Optimizing for LLMs...'));
         output = await autoMarkdown.convertProject(projectPath);
       }
 
@@ -172,8 +174,8 @@ program
         command: 'automarkdown ./my-project --max-size 2097152'
       },
       {
-        title: 'Enable AST analysis for better file prioritization',
-        command: 'automarkdown ./my-project --ast-analysis'
+        title: 'Disable AST analysis (faster but less accurate)',
+        command: 'automarkdown ./my-project --no-ast-analysis'
       }
     ];
 

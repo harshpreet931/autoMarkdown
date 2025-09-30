@@ -42,7 +42,7 @@ export class CodebaseParser {
       outputFormat: 'markdown',
       prioritizeFiles: ['README.md', 'package.json', 'requirements.txt', 'main.py', 'index.js'],
       includeMetadata: true,
-      useASTAnalysis: false,
+      useASTAnalysis: true,
       ...options,
       // Ensure exclude patterns are not overridden by spread - always merge with defaults
       excludePatterns: [
@@ -355,13 +355,10 @@ export class CodebaseParser {
   }
 
   private async performASTAnalysis(files: FileInfo[]): Promise<void> {
-    // Analyze each file's AST
-    const filesWithMetrics: Array<{path: string, metrics: ASTMetrics}> = [];
-
-    for (const file of files) {
+    // Analyze files in parallel for better performance
+    const analysisPromises = files.map(async (file) => {
       try {
         const metrics = await this.astAnalyzer.analyzeFile(file.path, file.content, file.language);
-        filesWithMetrics.push({ path: file.path, metrics });
 
         // Store basic metrics in file info
         file.astMetrics = {
@@ -372,11 +369,17 @@ export class CodebaseParser {
           complexity: metrics.complexity,
           centrality: 0 // Will be updated after dependency graph calculation
         };
+
+        return { path: file.path, metrics };
       } catch (error) {
-        // Skip files that can't be analyzed
-        console.warn(`Failed to analyze AST for ${file.path}:`, error);
+        // Silent fallback for files that can't be analyzed
+        return null;
       }
-    }
+    });
+
+    // Wait for all analyses to complete
+    const results = await Promise.all(analysisPromises);
+    const filesWithMetrics = results.filter((result): result is {path: string, metrics: ASTMetrics} => result !== null);
 
     // Build dependency graph and calculate centrality
     if (filesWithMetrics.length > 0) {
