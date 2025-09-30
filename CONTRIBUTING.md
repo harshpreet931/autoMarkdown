@@ -1,86 +1,128 @@
 # Contributing to AutoMarkdown
 
-Thank you for your interest in contributing to AutoMarkdown! We welcome contributions from everyone.
+Thanks for your interest in contributing to AutoMarkdown! We welcome all contributions that help make this tool better for developers working with AI assistants.
+
+## Hacktoberfest
+
+This repository participates in Hacktoberfest! Look for issues labeled `hacktoberfest`, `good first issue`, or `help wanted` to get started.
 
 ## Quick Start
 
-1. Fork the repository
-2. Clone your fork: `git clone https://github.com/yourusername/autoMarkdown.git`
-3. Create a new branch: `git checkout -b feature/your-feature-name`
-4. Make your changes
-5. Test your changes
-6. Commit and push: `git commit -m "Add your feature" && git push origin feature/your-feature-name`
-7. Create a pull request
+1. **Fork and clone the repository**
+   ```bash
+   git clone git@github.com:your-username/autoMarkdown.git
+   cd autoMarkdown
+   ```
 
-## Development Setup
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-### Node.js Development
-```bash
-npm install
-npm run build
-npm run dev  # Watch mode
-npm test
-npm run lint
-```
+3. **Build the project**
+   ```bash
+   npm run build
+   ```
 
-### Python Development
-```bash
-pip install -e .
-pip install pytest flake8 black
-pytest
-flake8 automarkdown
-black automarkdown
-```
+4. **Run tests**
+   ```bash
+   npm test
+   ```
 
-## Pull Request Guidelines
+5. **Test the CLI locally**
+   ```bash
+   node dist/cli.js . --help
+   ```
 
-- Keep changes focused and atomic
-- Add tests for new features
-- Update documentation as needed
-- Follow existing code style
-- Write clear commit messages
+## Contributing Guidelines
 
-## Bug Reports
+### Before You Start
+- Look for issues labeled `hacktoberfest`, `good first issue`, or `help wanted`
+- Comment on the issue to let others know you're working on it
+- For new features, please open an issue first to discuss the approach
 
-When filing bug reports, please include:
+### Pull Request Process
+1. **Work on a single issue per PR** - keep changes focused and reviewable
+2. **Use descriptive branch names**: `fix/parser-bug` or `feat/output-styling`
+3. **Write clear commit messages** that explain what and why
+4. **Link the issue in your PR description**: `Fixes #123` or `Closes #456`
+5. **Ensure all tests pass** and the build succeeds
+6. **Update documentation** if you're adding new features
 
-- Operating system and version
-- Node.js/Python version
-- AutoMarkdown version
-- Steps to reproduce
-- Expected vs actual behavior
-- Sample code/files if applicable
+### Code Style
+- Follow existing TypeScript/JavaScript conventions
+- Use meaningful variable and function names
+- Add JSDoc comments for new public methods
+- Ensure TypeScript compilation passes with no errors
 
-## Feature Requests
+### Types of Contributions We Welcome
 
-We love feature requests! Please include:
+**Bug Fixes**
+- Parser improvements for different file types
+- CLI option handling
+- Output formatting issues
 
-- Clear description of the feature
-- Use case/motivation
-- Example usage
-- Any implementation ideas
+**Features**
+- New language support for AST analysis
+- Output customization options
+- Performance optimizations
+- Integration improvements
 
-## Code Style
+**Documentation**
+- README improvements
+- Code examples
+- Usage guides
+- JSDoc comments
 
-### TypeScript/JavaScript
-- Use TypeScript for type safety
-- Follow existing ESLint configuration
-- Use meaningful variable names
-- Add JSDoc comments for public APIs
+**Testing**
+- Unit tests for core functionality
+- Integration tests for CLI
+- Performance benchmarks
 
-### Python
-- Follow PEP 8
-- Use type hints where possible
-- Use descriptive variable names
-- Add docstrings for public functions
+**Examples & Demos**
+- Sample projects showing different use cases
+- Integration examples with popular frameworks
 
-## Testing
+## Issue Labels
 
-- Write tests for new features
-- Ensure all tests pass before submitting
-- Test on multiple platforms if possible
-- Include edge cases in tests
+- `hacktoberfest` - Ready for Hacktoberfest contributors
+- `good first issue` - Perfect for newcomers
+- `help wanted` - We'd love community help on this
+- `bug` - Something isn't working
+- `enhancement` - New feature or improvement
+- `documentation` - Improvements to docs
+- `performance` - Speed or efficiency improvements
 
-## License
+## Recognition
 
-By contributing, you agree that your contributions will be licensed under the MIT License.
+All contributors will be:
+- Added to the contributors list
+- Mentioned in release notes for their contributions
+- Eligible for Hacktoberfest completion (during October)
+
+## Review Process
+
+Maintainers accept PRs by:
+- Merging them
+- Adding the `hacktoberfest-accepted` label
+- Giving an approving review
+
+We aim to review PRs within 48 hours during Hacktoberfest.
+
+## Code of Conduct
+
+This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). By participating, you agree to uphold this code.
+
+## Need Help?
+
+- Check existing issues and discussions
+- Join our community discussions
+- Tag maintainers in your issue for guidance
+
+## Thank You
+
+Every contribution makes AutoMarkdown better for developers worldwide. Whether you fix a typo or add a major feature, your help is valued and appreciated!
+
+---
+
+Happy coding!
