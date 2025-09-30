@@ -12,7 +12,7 @@ const program = new Command();
 program
   .name('automarkdown')
   .description('Intelligently convert codebases into markdown for LLMs')
-  .version('2.0.2');
+  .version('2.0.3');
 
 program
   .argument('<path>', 'Path to the codebase to convert')
@@ -20,9 +20,11 @@ program
   .option('-f, --format <format>', 'Output format: markdown or json', 'markdown')
   .option('--include-hidden', 'Include hidden files and directories')
   .option('--max-size <size>', 'Maximum file size in bytes', '1048576')
+  .option('--max-tokens <tokens>', 'Maximum tokens for LLM compatibility', '1000000')
   .option('--exclude <patterns>', 'Comma-separated exclude patterns', 'node_modules/**,.git/**,dist/**,build/**')
   .option('--include <patterns>', 'Comma-separated include patterns', '**/*')
   .option('--no-metadata', 'Exclude file metadata from output')
+  .option('--no-ast-analysis', 'Disable AST-based importance scoring (not recommended)')
   .action(async (projectPath: string, options) => {
     try {
       // Validate input path
@@ -37,7 +39,11 @@ program
         process.exit(1);
       }
 
-      console.log(chalk.blue('Analyzing codebase...'));
+      console.log(chalk.blue('Analyzing code structure...'));
+
+      if (options.astAnalysis === false) {
+        console.log(chalk.yellow('AST analysis disabled - file prioritization may be less accurate'));
+      }
 
       // Parse options
       const maxFileSize = parseInt(options.maxSize);
@@ -46,23 +52,33 @@ program
         process.exit(1);
       }
 
+      const maxTokens = parseInt(options.maxTokens);
+      if (isNaN(maxTokens) || maxTokens <= 0) {
+        console.error(chalk.red(`Error: Invalid max-tokens "${options.maxTokens}". Must be a positive number.`));
+        process.exit(1);
+      }
+
       const conversionOptions = {
         includeHidden: options.includeHidden,
         maxFileSize,
+        maxTokens,
         excludePatterns: options.exclude.split(',').map((p: string) => p.trim()),
         includePatterns: options.include.split(',').map((p: string) => p.trim()),
         outputFormat: options.format as 'markdown' | 'json',
-        includeMetadata: options.metadata !== false
+        includeMetadata: options.metadata !== false,
+        useASTAnalysis: options.astAnalysis !== false
       };
 
       const autoMarkdown = new AutoMarkdown(conversionOptions);
 
-      console.log(chalk.blue('Converting to markdown...'));
+      console.log(chalk.blue('Understanding dependencies...'));
 
       let output: string;
       if (options.format === 'json') {
+        console.log(chalk.blue('Optimizing for JSON format...'));
         output = await autoMarkdown.convertToJson(projectPath);
       } else {
+        console.log(chalk.blue('Optimizing for LLMs...'));
         output = await autoMarkdown.convertProject(projectPath);
       }
 
@@ -164,6 +180,14 @@ program
       {
         title: 'Larger file limit',
         command: 'automarkdown ./my-project --max-size 2097152'
+      },
+      {
+        title: 'Custom token limit for smaller LLMs',
+        command: 'automarkdown ./my-project --max-tokens 100000'
+      },
+      {
+        title: 'Disable AST analysis (faster but less accurate)',
+        command: 'automarkdown ./my-project --no-ast-analysis'
       }
     ];
 

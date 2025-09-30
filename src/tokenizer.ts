@@ -16,7 +16,7 @@ export class TokenCounter {
     { name: "GPT-5", maxTokens: 400000, provider: "OpenAI" },
     { name: "Gemini 2.5 Pro", maxTokens: 1000000, provider: "Google" },
     { name: "Claude Opus 4.1", maxTokens: 200000, provider: "Anthropic" },
-    { name: "Claude Sonnet 4", maxTokens: 200000, provider: "Anthropic" },
+    { name: "Claude Sonnet 4.5", maxTokens: 200000, provider: "Anthropic" },
     { name: "Grok-4", maxTokens: 200000, provider: "xAI" },
     { name: "Llama 3.1", maxTokens: 128000, provider: "Meta" },
     { name: "Mistral Large 2", maxTokens: 128000, provider: "Mistral" },

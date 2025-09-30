@@ -3,10 +3,12 @@ import * as path from 'path';
 import { glob } from 'glob';
 import ignore from 'ignore';
 import { FileInfo, ParsedProject, ProjectStructure, ConversionOptions } from './types';
+import { ASTAnalyzer, ASTMetrics } from './ast-analyzer';
 
 export class CodebaseParser {
   private options: ConversionOptions;
   private gitIgnore: ReturnType<typeof ignore> | null = null;
+  private astAnalyzer: ASTAnalyzer;
 
   constructor(options: ConversionOptions = {}) {
     // Default exclude patterns
@@ -40,6 +42,7 @@ export class CodebaseParser {
       outputFormat: 'markdown',
       prioritizeFiles: ['README.md', 'package.json', 'requirements.txt', 'main.py', 'index.js'],
       includeMetadata: true,
+      useASTAnalysis: true,
       ...options,
       // Ensure exclude patterns are not overridden by spread - always merge with defaults
       excludePatterns: [
@@ -47,6 +50,8 @@ export class CodebaseParser {
         ...(options.excludePatterns || [])
       ]
     };
+
+    this.astAnalyzer = new ASTAnalyzer();
   }
 
   async parseProject(projectPath: string): Promise<ParsedProject> {
@@ -54,6 +59,12 @@ export class CodebaseParser {
     await this.loadGitIgnore(projectPath);
 
     const files = await this.getProjectFiles(projectPath);
+
+    // Perform AST analysis if enabled
+    if (this.options.useASTAnalysis) {
+      await this.performASTAnalysis(files);
+    }
+
     const structure = await this.buildProjectStructure(projectPath);
     const summary = this.generateProjectSummary(files, structure);
 
@@ -129,7 +140,6 @@ export class CodebaseParser {
   }
 
   private async buildProjectStructure(projectPath: string): Promise<ProjectStructure> {
-    const name = path.basename(projectPath);
     
     const buildStructure = async (currentPath: string, relativePath: string = ''): Promise<ProjectStructure> => {
       const stat = await fs.promises.stat(currentPath);
@@ -343,11 +353,78 @@ export class CodebaseParser {
     return Math.max(importance, 0);
   }
 
-  private generateProjectSummary(files: FileInfo[], structure: ProjectStructure): string {
+  private async performASTAnalysis(files: FileInfo[]): Promise<void> {
+    // Analyze files in parallel for better performance
+    const analysisPromises = files.map(async (file) => {
+      try {
+        const metrics = await this.astAnalyzer.analyzeFile(file.path, file.content, file.language);
+
+        // Store basic metrics in file info
+        file.astMetrics = {
+          exportCount: metrics.exportCount,
+          importCount: metrics.importCount,
+          functionCount: metrics.functionCount,
+          classCount: metrics.classCount,
+          complexity: metrics.complexity,
+          centrality: 0 // Will be updated after dependency graph calculation
+        };
+
+        return { path: file.path, metrics };
+      } catch (error) {
+        // Silent fallback for files that can't be analyzed
+        return null;
+      }
+    });
+
+    // Wait for all analyses to complete
+    const results = await Promise.all(analysisPromises);
+    const filesWithMetrics = results.filter((result): result is {path: string, metrics: ASTMetrics} => result !== null);
+
+    // Build dependency graph and calculate centrality
+    if (filesWithMetrics.length > 0) {
+      const dependencyGraph = this.astAnalyzer.buildDependencyGraph(filesWithMetrics);
+
+      // Update centrality scores in file info
+      files.forEach(file => {
+        if (file.astMetrics && dependencyGraph[file.path]) {
+          file.astMetrics.centrality = dependencyGraph[file.path].centrality;
+        }
+      });
+
+      // Recalculate importance scores with AST data
+      files.forEach(file => {
+        if (file.astMetrics) {
+          const astImportance = this.astAnalyzer.calculateASTImportance(
+            filesWithMetrics.find(f => f.path === file.path)?.metrics || {} as ASTMetrics,
+            file.astMetrics.centrality
+          );
+
+          // Combine traditional heuristics with AST analysis (weighted average)
+          file.importance = (file.importance * 0.3) + (astImportance * 0.7);
+        }
+      });
+    }
+  }
+
+  private generateProjectSummary(files: FileInfo[], _structure: ProjectStructure): string {
     const totalFiles = files.length;
     const languages = [...new Set(files.map(f => f.language))];
     const totalSize = files.reduce((sum, f) => sum + f.size, 0);
-    
-    return `Project contains ${totalFiles} files in ${languages.length} different languages (${languages.join(', ')}). Total size: ${(totalSize / 1024).toFixed(2)} KB.`;
+
+    let summary = `Project contains ${totalFiles} files in ${languages.length} different languages (${languages.join(', ')}). Total size: ${(totalSize / 1024).toFixed(2)} KB.`;
+
+    // Add AST analysis summary if enabled
+    if (this.options.useASTAnalysis) {
+      const filesWithAST = files.filter(f => f.astMetrics);
+      if (filesWithAST.length > 0) {
+        const totalExports = filesWithAST.reduce((sum, f) => sum + (f.astMetrics?.exportCount || 0), 0);
+        const totalFunctions = filesWithAST.reduce((sum, f) => sum + (f.astMetrics?.functionCount || 0), 0);
+        const totalClasses = filesWithAST.reduce((sum, f) => sum + (f.astMetrics?.classCount || 0), 0);
+
+        summary += ` AST Analysis: ${totalExports} exports, ${totalFunctions} functions, ${totalClasses} classes across ${filesWithAST.length} analyzed files.`;
+      }
+    }
+
+    return summary;
   }
 }

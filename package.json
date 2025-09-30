@@ -1,6 +1,6 @@
 {
   "name": "automarkdown",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "Intelligently convert codebases into markdown for LLMs to process and provide optimal insights",
   "main": "dist/index.js",
   "bin": {
@@ -32,6 +32,7 @@
   },
   "homepage": "https://github.com/harshpreet931/autoMarkdown#readme",
   "devDependencies": {
+    "@types/acorn": "^4.0.6",
     "@types/node": "^20.19.17",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
@@ -40,6 +41,8 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@typescript-eslint/typescript-estree": "^8.45.0",
+    "acorn": "^8.15.0",
     "chalk": "^4.1.2",
     "commander": "^11.0.0",
     "glob": "^10.0.0",

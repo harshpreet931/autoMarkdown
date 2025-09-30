@@ -4,6 +4,14 @@ export interface FileInfo {
   language: string;
   size: number;
   importance: number;
+  astMetrics?: {
+    exportCount: number;
+    importCount: number;
+    functionCount: number;
+    classCount: number;
+    complexity: number;
+    centrality: number;
+  };
 }
 
 export interface ParsedProject {
@@ -27,4 +35,6 @@ export interface ConversionOptions {
   outputFormat?: 'markdown' | 'json';
   prioritizeFiles?: string[];
   includeMetadata?: boolean;
+  useASTAnalysis?: boolean;
+  maxTokens?: number;
 }
