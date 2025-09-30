@@ -20,6 +20,7 @@ program
   .option('-f, --format <format>', 'Output format: markdown or json', 'markdown')
   .option('--include-hidden', 'Include hidden files and directories')
   .option('--max-size <size>', 'Maximum file size in bytes', '1048576')
+  .option('--max-tokens <tokens>', 'Maximum tokens for LLM compatibility', '1000000')
   .option('--exclude <patterns>', 'Comma-separated exclude patterns', 'node_modules/**,.git/**,dist/**,build/**')
   .option('--include <patterns>', 'Comma-separated include patterns', '**/*')
   .option('--no-metadata', 'Exclude file metadata from output')
@@ -51,9 +52,16 @@ program
         process.exit(1);
       }
 
+      const maxTokens = parseInt(options.maxTokens);
+      if (isNaN(maxTokens) || maxTokens <= 0) {
+        console.error(chalk.red(`Error: Invalid max-tokens "${options.maxTokens}". Must be a positive number.`));
+        process.exit(1);
+      }
+
       const conversionOptions = {
         includeHidden: options.includeHidden,
         maxFileSize,
+        maxTokens,
         excludePatterns: options.exclude.split(',').map((p: string) => p.trim()),
         includePatterns: options.include.split(',').map((p: string) => p.trim()),
         outputFormat: options.format as 'markdown' | 'json',
@@ -172,6 +180,10 @@ program
       {
         title: 'Larger file limit',
         command: 'automarkdown ./my-project --max-size 2097152'
+      },
+      {
+        title: 'Custom token limit for smaller LLMs',
+        command: 'automarkdown ./my-project --max-tokens 100000'
       },
       {
         title: 'Disable AST analysis (faster but less accurate)',

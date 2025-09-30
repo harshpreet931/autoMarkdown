@@ -36,4 +36,5 @@ export interface ConversionOptions {
   prioritizeFiles?: string[];
   includeMetadata?: boolean;
   useASTAnalysis?: boolean;
+  maxTokens?: number;
 }

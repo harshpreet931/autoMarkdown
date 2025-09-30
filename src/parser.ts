@@ -3,7 +3,7 @@ import * as path from 'path';
 import { glob } from 'glob';
 import ignore from 'ignore';
 import { FileInfo, ParsedProject, ProjectStructure, ConversionOptions } from './types';
-import { ASTAnalyzer, ASTMetrics, DependencyGraph } from './ast-analyzer';
+import { ASTAnalyzer, ASTMetrics } from './ast-analyzer';
 
 export class CodebaseParser {
   private options: ConversionOptions;
@@ -140,7 +140,6 @@ export class CodebaseParser {
   }
 
   private async buildProjectStructure(projectPath: string): Promise<ProjectStructure> {
-    const name = path.basename(projectPath);
     
     const buildStructure = async (currentPath: string, relativePath: string = ''): Promise<ProjectStructure> => {
       const stat = await fs.promises.stat(currentPath);
@@ -407,7 +406,7 @@ export class CodebaseParser {
     }
   }
 
-  private generateProjectSummary(files: FileInfo[], structure: ProjectStructure): string {
+  private generateProjectSummary(files: FileInfo[], _structure: ProjectStructure): string {
     const totalFiles = files.length;
     const languages = [...new Set(files.map(f => f.language))];
     const totalSize = files.reduce((sum, f) => sum + f.size, 0);

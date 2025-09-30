@@ -28,6 +28,24 @@ export interface DependencyGraph {
 }
 
 export class ASTAnalyzer {
+  // Scoring constants
+  private static readonly ENTRY_POINT_SCORE = 20;
+  private static readonly MAIN_LOGIC_SCORE = 15;
+  private static readonly EXPORT_MULTIPLIER = 3;
+  private static readonly PUBLIC_METHOD_MULTIPLIER = 2;
+  private static readonly FRAMEWORK_CORE_SCORE = 10;
+  private static readonly CONFIG_FILE_SCORE = 8;
+  private static readonly FRONTEND_FRAMEWORK_SCORE = 5;
+  private static readonly BACKEND_FRAMEWORK_SCORE = 6;
+  private static readonly COMPLEXITY_DIVISOR = 5;
+  private static readonly COMPLEXITY_MAX_SCORE = 5;
+  private static readonly CENTRALITY_MULTIPLIER = 10;
+  private static readonly UTILITY_FILE_BONUS = 5;
+  private static readonly TEST_FILE_PENALTY = 0.3;
+  private static readonly GENERATED_FILE_PENALTY = 0.1;
+  private static readonly IMPORT_THRESHOLD = 10;
+  private static readonly IMPORT_PENALTY_MULTIPLIER = 0.2;
+
   private astCache = new Map<string, ASTMetrics>();
 
   async analyzeFile(filePath: string, content: string, language: string): Promise<ASTMetrics> {
@@ -388,12 +406,57 @@ export class ASTAnalyzer {
     }
   }
 
-  private calculateFunctionComplexity(_node: any): number {
-    // Simple cyclomatic complexity: start with 1, add 1 for each decision point
+  private calculateFunctionComplexity(node: any): number {
+    // Cyclomatic complexity: start with 1, add 1 for each decision point
     let complexity = 1;
 
-    // This would need a full AST walk to be accurate
-    // For now, return a base complexity
+    const walk = (n: any): void => {
+      if (!n || typeof n !== 'object') return;
+
+      switch (n.type) {
+        case 'IfStatement':
+        case 'ForStatement':
+        case 'ForInStatement':
+        case 'ForOfStatement':
+        case 'WhileStatement':
+        case 'DoWhileStatement':
+        case 'CatchClause':
+          complexity++;
+          break;
+        case 'LogicalExpression':
+          if (n.operator === '&&' || n.operator === '||') {
+            complexity++;
+          }
+          break;
+        case 'SwitchCase':
+          // Only count non-default cases
+          if (n.test) {
+            complexity++;
+          }
+          break;
+        case 'ConditionalExpression':
+          complexity++;
+          break;
+      }
+
+      // Recursively walk all child nodes
+      for (const key in n) {
+        if (n.hasOwnProperty(key)) {
+          const child = n[key];
+          if (Array.isArray(child)) {
+            child.forEach(walk);
+          } else if (child && typeof child === 'object' && child.type) {
+            walk(child);
+          }
+        }
+      }
+    };
+
+    // Walk the function body
+    if (node && node.body) {
+      walk(node.body);
+    }
+
     return complexity;
   }
 
@@ -493,43 +556,43 @@ export class ASTAnalyzer {
     let score = 0;
 
     // Core functionality (highest priority)
-    if (metrics.isEntryPoint) score += 20;
-    if (this.isMainLogic(metrics)) score += 15;
+    if (metrics.isEntryPoint) score += ASTAnalyzer.ENTRY_POINT_SCORE;
+    if (this.isMainLogic(metrics)) score += ASTAnalyzer.MAIN_LOGIC_SCORE;
 
     // API surface area
-    score += metrics.exportCount * 3;
-    score += metrics.publicMethods * 2;
+    score += metrics.exportCount * ASTAnalyzer.EXPORT_MULTIPLIER;
+    score += metrics.publicMethods * ASTAnalyzer.PUBLIC_METHOD_MULTIPLIER;
 
     // Project role
-    if (this.isFrameworkCore(metrics)) score += 10;
-    if (metrics.isConfigFile) score += 8;
+    if (this.isFrameworkCore(metrics)) score += ASTAnalyzer.FRAMEWORK_CORE_SCORE;
+    if (metrics.isConfigFile) score += ASTAnalyzer.CONFIG_FILE_SCORE;
 
     // Framework-specific boosts
     metrics.frameworks.forEach(framework => {
       if (['react', 'vue', 'angular'].includes(framework)) {
-        score += 5; // Frontend framework files are important
+        score += ASTAnalyzer.FRONTEND_FRAMEWORK_SCORE;
       }
       if (['express', 'fastify', 'nestjs'].includes(framework)) {
-        score += 6; // Backend framework files are critical
+        score += ASTAnalyzer.BACKEND_FRAMEWORK_SCORE;
       }
     });
 
     // Code quality indicators
-    score += Math.min(metrics.complexity / 5, 5); // Sweet spot complexity
-    score += centrality * 10; // Dependency importance
+    score += Math.min(metrics.complexity / ASTAnalyzer.COMPLEXITY_DIVISOR, ASTAnalyzer.COMPLEXITY_MAX_SCORE);
+    score += centrality * ASTAnalyzer.CENTRALITY_MULTIPLIER;
 
     // Context-aware scoring
     if (metrics.importCount === 0 && metrics.exportCount > 0) {
-      score += 5; // Likely a utility/library file
+      score += ASTAnalyzer.UTILITY_FILE_BONUS;
     }
 
     // Penalties
-    if (metrics.isTestFile) score *= 0.3;
-    if (this.isGeneratedFile(metrics)) score *= 0.1;
+    if (metrics.isTestFile) score *= ASTAnalyzer.TEST_FILE_PENALTY;
+    if (this.isGeneratedFile(metrics)) score *= ASTAnalyzer.GENERATED_FILE_PENALTY;
 
     // Import penalty (files with too many dependencies might be less important)
-    if (metrics.importCount > 10) {
-      score -= (metrics.importCount - 10) * 0.2;
+    if (metrics.importCount > ASTAnalyzer.IMPORT_THRESHOLD) {
+      score -= (metrics.importCount - ASTAnalyzer.IMPORT_THRESHOLD) * ASTAnalyzer.IMPORT_PENALTY_MULTIPLIER;
     }
 
     return Math.max(score, 0);

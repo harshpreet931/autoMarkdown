@@ -154,7 +154,7 @@ ${this.renderStructureTree(structure, 0)}
   }
 
   private applyTokenAwareFiltering(project: ParsedProject): ParsedProject {
-    const maxTokens = 150000; // Conservative limit for most LLMs
+    const maxTokens = this.options.maxTokens ?? 1000000; // Configurable limit for different LLMs
     let currentTokens = 0;
     const includedFiles: FileInfo[] = [];
 
