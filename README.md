@@ -30,6 +30,7 @@ npm install -g automarkdown
 
 ## Use
 
+### Published Package
 ```bash
 # Convert current directory
 npx automarkdown .
@@ -47,6 +48,21 @@ npx automarkdown . --max-inline-length 100
 
 # Create config file for persistent settings
 npx automarkdown init
+```
+
+### Local Development ( For Contributors/Developers Only)
+```bash
+# Build first
+npm run build
+
+# Then use with node
+node dist/cli.js . --header-level 2 --section-level 3 --file-level 4
+node dist/cli.js init
+node dist/cli.js . -o docs.md
+
+# Or use npm scripts
+npm run start init
+npm run start . -- --inline-code --line-numbers
 ```
 
 ## Customization
