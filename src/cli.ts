@@ -28,6 +28,13 @@ function validatePositiveNumber(value: any, name: string, defaultValue: string):
   return num;
 }
 
+function processPatterns(patterns: string | string[] | undefined): string[] {
+  if (typeof patterns === 'string') {
+    return patterns.split(',').map((p: string) => p.trim());
+  }
+  return patterns || [];
+}
+
 function loadConfig(): Partial<ConversionOptions> {
   const configFiles = ['automarkdown.config.json', '.automarkdownrc.json', '.automarkdownrc'];
   for (const configFile of configFiles) {
@@ -137,12 +144,8 @@ program
         includeHidden: mergedOptions.includeHidden,
         maxFileSize,
         maxTokens,
-        excludePatterns: typeof (mergedOptions.exclude || mergedOptions.excludePatterns) === 'string' 
-          ? (mergedOptions.exclude || mergedOptions.excludePatterns).split(',').map((p: string) => p.trim()) 
-          : (mergedOptions.exclude || mergedOptions.excludePatterns) || [],
-        includePatterns: typeof (mergedOptions.include || mergedOptions.includePatterns) === 'string'
-          ? (mergedOptions.include || mergedOptions.includePatterns).split(',').map((p: string) => p.trim())
-          : (mergedOptions.include || mergedOptions.includePatterns) || [],
+        excludePatterns: processPatterns(mergedOptions.exclude || mergedOptions.excludePatterns),
+        includePatterns: processPatterns(mergedOptions.include || mergedOptions.includePatterns),
         outputFormat: (mergedOptions.format || mergedOptions.outputFormat) as 'markdown' | 'json',
         includeMetadata: mergedOptions.metadata !== false && mergedOptions.includeMetadata !== false,
         useASTAnalysis: mergedOptions.astAnalysis !== false && mergedOptions.useASTAnalysis !== false,
