@@ -15,11 +15,17 @@ export class AutoMarkdown {
   }
 
   async convertProject(projectPath: string): Promise<string> {
+    if (!projectPath || typeof projectPath !== 'string') {
+      throw new Error('Project path must be a non-empty string');
+    }
     const project = await this.parser.parseProject(projectPath);
     return this.converter.convertToMarkdown(project);
   }
 
   async convertToJson(projectPath: string): Promise<string> {
+    if (!projectPath || typeof projectPath !== 'string') {
+      throw new Error('Project path must be a non-empty string');
+    }
     const project = await this.parser.parseProject(projectPath);
     return this.converter.convertToJson(project);
   }

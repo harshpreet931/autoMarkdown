@@ -10,6 +10,24 @@ import { ConversionOptions } from './types';
 
 const program = new Command();
 
+function validateHeaderLevel(value: any, name: string, defaultValue: string): number {
+  const headerLevel = parseInt(value || defaultValue);
+  if (isNaN(headerLevel) || headerLevel < 1 || headerLevel > 6) {
+    console.error(chalk.red(`Error: Invalid ${name} "${value || defaultValue}". Must be between 1 and 6.`));
+    process.exit(1);
+  }
+  return headerLevel;
+}
+
+function validatePositiveNumber(value: any, name: string, defaultValue: string): number {
+  const num = parseInt(value || defaultValue);
+  if (isNaN(num) || num <= 0) {
+    console.error(chalk.red(`Error: Invalid ${name} "${value || defaultValue}". Must be a positive number.`));
+    process.exit(1);
+  }
+  return num;
+}
+
 function loadConfig(): Partial<ConversionOptions> {
   const configFiles = ['automarkdown.config.json', '.automarkdownrc.json', '.automarkdownrc'];
   for (const configFile of configFiles) {
@@ -20,7 +38,7 @@ function loadConfig(): Partial<ConversionOptions> {
         console.log(chalk.blue(`Loaded configuration from: ${configFile}`));
         return config;
       } catch (error) {
-        console.warn(chalk.yellow(`Warning: Could not parse config file ${configFile}: ${error}`));
+        console.warn(chalk.yellow(`Warning: Could not parse config file ${configFile}: ${error instanceof Error ? error.message : error}`));
       }
     }
   }
@@ -78,49 +96,53 @@ program
       const mergedOptions = { ...config, ...options };
 
       // Parse options
-      const maxFileSize = parseInt(mergedOptions.maxSize || mergedOptions.maxFileSize);
-      if (isNaN(maxFileSize) || maxFileSize <= 0) {
-        console.error(chalk.red(`Error: Invalid max-size "${mergedOptions.maxSize || mergedOptions.maxFileSize}". Must be a positive number.`));
-        process.exit(1);
-      }
+      const maxFileSize = validatePositiveNumber(
+        mergedOptions.maxSize || mergedOptions.maxFileSize,
+        'max-size',
+        '1048576'
+      );
 
-      const maxTokens = parseInt(mergedOptions.maxTokens || '1000000');
-      if (isNaN(maxTokens) || maxTokens <= 0) {
-        console.error(chalk.red(`Error: Invalid max-tokens "${mergedOptions.maxTokens}". Must be a positive number.`));
-        process.exit(1);
-      }
+      const maxTokens = validatePositiveNumber(
+        mergedOptions.maxTokens,
+        'max-tokens',
+        '1000000'
+      );
 
       // Parse header levels
-      const headerLevel = parseInt(mergedOptions.headerLevel || mergedOptions.styling?.headerStyle?.mainTitle || '1');
-      if (isNaN(headerLevel) || headerLevel < 1 || headerLevel > 6) {
-        console.error(chalk.red(`Error: Invalid header-level "${mergedOptions.headerLevel || mergedOptions.styling?.headerStyle?.mainTitle}". Must be between 1 and 6.`));
-        process.exit(1);
-      }
+      const headerLevel = validateHeaderLevel(
+        mergedOptions.headerLevel || mergedOptions.styling?.headerStyle?.mainTitle,
+        'header-level',
+        '1'
+      );
 
-      const sectionLevel = parseInt(mergedOptions.sectionLevel || mergedOptions.styling?.headerStyle?.sectionTitle || '2');
-      if (isNaN(sectionLevel) || sectionLevel < 1 || sectionLevel > 6) {
-        console.error(chalk.red(`Error: Invalid section-level "${mergedOptions.sectionLevel || mergedOptions.styling?.headerStyle?.sectionTitle}". Must be between 1 and 6.`));
-        process.exit(1);
-      }
+      const sectionLevel = validateHeaderLevel(
+        mergedOptions.sectionLevel || mergedOptions.styling?.headerStyle?.sectionTitle,
+        'section-level', 
+        '2'
+      );
 
-      const fileLevel = parseInt(mergedOptions.fileLevel || mergedOptions.styling?.headerStyle?.fileTitle || '3');
-      if (isNaN(fileLevel) || fileLevel < 1 || fileLevel > 6) {
-        console.error(chalk.red(`Error: Invalid file-level "${mergedOptions.fileLevel || mergedOptions.styling?.headerStyle?.fileTitle}". Must be between 1 and 6.`));
-        process.exit(1);
-      }
+      const fileLevel = validateHeaderLevel(
+        mergedOptions.fileLevel || mergedOptions.styling?.headerStyle?.fileTitle,
+        'file-level',
+        '3'
+      );
 
-      const maxInlineLength = parseInt(mergedOptions.maxInlineLength || mergedOptions.styling?.codeStyle?.maxInlineLength || '50');
-      if (isNaN(maxInlineLength) || maxInlineLength <= 0) {
-        console.error(chalk.red(`Error: Invalid max-inline-length "${mergedOptions.maxInlineLength || mergedOptions.styling?.codeStyle?.maxInlineLength}". Must be a positive number.`));
-        process.exit(1);
-      }
+      const maxInlineLength = validatePositiveNumber(
+        mergedOptions.maxInlineLength || mergedOptions.styling?.codeStyle?.maxInlineLength,
+        'max-inline-length',
+        '50'
+      );
 
       const conversionOptions = {
         includeHidden: mergedOptions.includeHidden,
         maxFileSize,
         maxTokens,
-        excludePatterns: (mergedOptions.exclude || mergedOptions.excludePatterns)?.split(',').map((p: string) => p.trim()) || [],
-        includePatterns: (mergedOptions.include || mergedOptions.includePatterns)?.split(',').map((p: string) => p.trim()) || [],
+        excludePatterns: typeof (mergedOptions.exclude || mergedOptions.excludePatterns) === 'string' 
+          ? (mergedOptions.exclude || mergedOptions.excludePatterns).split(',').map((p: string) => p.trim()) 
+          : (mergedOptions.exclude || mergedOptions.excludePatterns) || [],
+        includePatterns: typeof (mergedOptions.include || mergedOptions.includePatterns) === 'string'
+          ? (mergedOptions.include || mergedOptions.includePatterns).split(',').map((p: string) => p.trim())
+          : (mergedOptions.include || mergedOptions.includePatterns) || [],
         outputFormat: (mergedOptions.format || mergedOptions.outputFormat) as 'markdown' | 'json',
         includeMetadata: mergedOptions.metadata !== false && mergedOptions.includeMetadata !== false,
         useASTAnalysis: mergedOptions.astAnalysis !== false && mergedOptions.useASTAnalysis !== false,

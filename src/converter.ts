@@ -9,7 +9,11 @@ export class MarkdownConverter {
     this.options = options;
     this.styling = this.getDefaultStyling();
     if (options.styling) {
-      this.styling = { ...this.styling, ...options.styling };
+      this.styling = {
+        headerStyle: { ...this.styling.headerStyle, ...options.styling.headerStyle },
+        listStyle: { ...this.styling.listStyle, ...options.styling.listStyle },
+        codeStyle: { ...this.styling.codeStyle, ...options.styling.codeStyle }
+      };
     }
   }
 
@@ -100,9 +104,9 @@ ${project.summary}
 
 ### Key Statistics
 - **Total Files**: ${project.files.length}
-- **Languages**: ${languages.join(', ')}
+- **Languages**: ${languages.length > 0 ? languages.join(', ') : 'None detected'}
 - **Total Size**: ${(totalSize / 1024).toFixed(2)} KB
-- **Most Important Files**: ${project.files.slice(0, 5).map(f => f.path).join(', ')}`;
+- **Most Important Files**: ${project.files.length > 0 ? project.files.slice(0, 5).map(f => f.path).join(', ') : 'None'}`;
   }
 
   private generateProjectStructure(structure: ProjectStructure, level: number = 0): string {
@@ -156,13 +160,18 @@ ${this.renderStructureTree(structure, 0)}
 
   private generateCodeBlock(file: FileInfo): string {
     const { useInlineCode = false, maxInlineLength = 50, showLineNumbers = false } = this.styling.codeStyle || {};
+    
+    // Safety check for file content
+    if (!file.content || file.content.length === 0) {
+      return '```\n// Empty file\n```';
+    }
 
     // Use inline code for small snippets if enabled
     if (useInlineCode && file.content.length <= maxInlineLength && !file.content.includes('\n')) {
-      return `\`${file.content}\``;
+      return `\`${file.content.replace(/`/g, '\\`')}\``;
     }
 
-    let codeBlock = '```' + file.language;
+    let codeBlock = '```' + (file.language || 'text');
     
     if (showLineNumbers) {
       const lines = file.content.split('\n');

@@ -47,6 +47,7 @@ export class ASTAnalyzer {
   private static readonly IMPORT_PENALTY_MULTIPLIER = 0.2;
 
   private astCache = new Map<string, ASTMetrics>();
+  private static readonly MAX_CACHE_SIZE = 1000;
 
   async analyzeFile(filePath: string, content: string, language: string): Promise<ASTMetrics> {
     // Create cache key from file path and content hash
@@ -101,7 +102,14 @@ export class ASTAnalyzer {
       result = this.analyzeGeneric(content, metrics);
     }
 
-    // Cache the result
+    // Cache the result with size limit
+    if (this.astCache.size >= ASTAnalyzer.MAX_CACHE_SIZE) {
+      // Remove oldest entries (simple LRU-like behavior)
+      const firstKey = this.astCache.keys().next().value;
+      if (firstKey) {
+        this.astCache.delete(firstKey);
+      }
+    }
     this.astCache.set(cacheKey, result);
     return result;
   }
