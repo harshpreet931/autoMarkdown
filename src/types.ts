@@ -27,6 +27,23 @@ export interface ProjectStructure {
   path: string;
 }
 
+export interface StylingOptions {
+  headerStyle?: {
+    mainTitle?: number; // Header level for main title (default: 1)
+    sectionTitle?: number; // Header level for sections (default: 2)
+    fileTitle?: number; // Header level for file titles (default: 3)
+  };
+  listStyle?: {
+    tocBullet?: string; // Bullet style for TOC (default: '-')
+    structureBullet?: string; // Bullet style for structure tree (default: '├──')
+  };
+  codeStyle?: {
+    useInlineCode?: boolean; // Use inline code instead of code blocks for small snippets (default: false)
+    maxInlineLength?: number; // Max length for inline code (default: 50)
+    showLineNumbers?: boolean; // Add line numbers to code blocks (default: false)
+  };
+}
+
 export interface ConversionOptions {
   includeHidden?: boolean;
   maxFileSize?: number;
@@ -37,4 +54,5 @@ export interface ConversionOptions {
   includeMetadata?: boolean;
   useASTAnalysis?: boolean;
   maxTokens?: number;
+  styling?: StylingOptions;
 }

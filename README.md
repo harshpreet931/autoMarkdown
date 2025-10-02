@@ -30,6 +30,7 @@ npm install -g automarkdown
 
 ## Use
 
+### Published Package
 ```bash
 # Convert current directory
 npx automarkdown .
@@ -39,6 +40,54 @@ npx automarkdown . -o docs.md
 
 # JSON format
 npx automarkdown . -f json
+
+# Customization options
+npx automarkdown . --header-level 2 --section-level 3 --file-level 4
+npx automarkdown . --toc-bullet "*" --inline-code --line-numbers
+npx automarkdown . --max-inline-length 100
+
+# Create config file for persistent settings
+npx automarkdown init
+```
+
+### Local Development ( For Contributors/Developers Only)
+```bash
+# Build first
+npm run build
+
+# Then use with node
+node dist/cli.js . --header-level 2 --section-level 3 --file-level 4
+node dist/cli.js init
+node dist/cli.js . -o docs.md
+
+# Or use npm scripts
+npm run start init
+npm run start . -- --inline-code --line-numbers
+```
+
+## Customization
+
+Create `automarkdown.config.json` for persistent styling:
+
+```json
+{
+  "styling": {
+    "headerStyle": {
+      "mainTitle": 1,    // Main title header level (1-6)
+      "sectionTitle": 2, // Section header level (1-6)  
+      "fileTitle": 3     // File header level (1-6)
+    },
+    "listStyle": {
+      "tocBullet": "-",     // Table of contents bullet
+      "structureBullet": "├──" // Project tree bullet
+    },
+    "codeStyle": {
+      "useInlineCode": false,   // Use `code` for small snippets
+      "maxInlineLength": 50,    // Max chars for inline code
+      "showLineNumbers": false  // Add line numbers to blocks
+    }
+  }
+}
 ```
 
 ## Output

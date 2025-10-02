@@ -6,8 +6,51 @@ import * as path from 'path';
 import chalk from 'chalk';
 import AutoMarkdown from './index';
 import { TokenCounter } from './tokenizer';
+import { ConversionOptions } from './types';
 
 const program = new Command();
+
+function validateHeaderLevel(value: any, name: string, defaultValue: string): number {
+  const headerLevel = parseInt(value || defaultValue);
+  if (isNaN(headerLevel) || headerLevel < 1 || headerLevel > 6) {
+    console.error(chalk.red(`Error: Invalid ${name} "${value || defaultValue}". Must be between 1 and 6.`));
+    process.exit(1);
+  }
+  return headerLevel;
+}
+
+function validatePositiveNumber(value: any, name: string, defaultValue: string): number {
+  const num = parseInt(value || defaultValue);
+  if (isNaN(num) || num <= 0) {
+    console.error(chalk.red(`Error: Invalid ${name} "${value || defaultValue}". Must be a positive number.`));
+    process.exit(1);
+  }
+  return num;
+}
+
+function processPatterns(patterns: string | string[] | undefined): string[] {
+  if (typeof patterns === 'string') {
+    return patterns.split(',').map((p: string) => p.trim());
+  }
+  return patterns || [];
+}
+
+function loadConfig(): Partial<ConversionOptions> {
+  const configFiles = ['automarkdown.config.json', '.automarkdownrc.json', '.automarkdownrc'];
+  for (const configFile of configFiles) {
+    if (fs.existsSync(configFile)) {
+      try {
+        const configContent = fs.readFileSync(configFile, 'utf-8');
+        const config = JSON.parse(configContent);
+        console.log(chalk.blue(`Loaded configuration from: ${configFile}`));
+        return config;
+      } catch (error) {
+        console.warn(chalk.yellow(`Warning: Could not parse config file ${configFile}: ${error instanceof Error ? error.message : error}`));
+      }
+    }
+  }
+  return {};
+}
 
 program
   .name('automarkdown')
@@ -25,8 +68,19 @@ program
   .option('--include <patterns>', 'Comma-separated include patterns', '**/*')
   .option('--no-metadata', 'Exclude file metadata from output')
   .option('--no-ast-analysis', 'Disable AST-based importance scoring (not recommended)')
+  .option('--header-level <level>', 'Header level for main title (1-6)', '1')
+  .option('--section-level <level>', 'Header level for sections (1-6)', '2')
+  .option('--file-level <level>', 'Header level for file titles (1-6)', '3')
+  .option('--toc-bullet <bullet>', 'Bullet style for table of contents', '-')
+  .option('--structure-bullet <bullet>', 'Bullet style for project structure', '├──')
+  .option('--inline-code', 'Use inline code for small snippets')
+  .option('--max-inline-length <length>', 'Maximum length for inline code', '50')
+  .option('--line-numbers', 'Add line numbers to code blocks')
   .action(async (projectPath: string, options) => {
     try {
+      // Load config file
+      const config = loadConfig();
+
       // Validate input path
       if (!fs.existsSync(projectPath)) {
         console.error(chalk.red(`Error: Path "${projectPath}" does not exist`));
@@ -45,28 +99,72 @@ program
         console.log(chalk.yellow('AST analysis disabled - file prioritization may be less accurate'));
       }
 
-      // Parse options
-      const maxFileSize = parseInt(options.maxSize);
-      if (isNaN(maxFileSize) || maxFileSize <= 0) {
-        console.error(chalk.red(`Error: Invalid max-size "${options.maxSize}". Must be a positive number.`));
-        process.exit(1);
-      }
+      // Merge config with CLI options (CLI options take precedence)
+      const mergedOptions = { ...config, ...options };
 
-      const maxTokens = parseInt(options.maxTokens);
-      if (isNaN(maxTokens) || maxTokens <= 0) {
-        console.error(chalk.red(`Error: Invalid max-tokens "${options.maxTokens}". Must be a positive number.`));
-        process.exit(1);
-      }
+      // Parse options
+      const maxFileSize = validatePositiveNumber(
+        mergedOptions.maxSize || mergedOptions.maxFileSize,
+        'max-size',
+        '1048576'
+      );
+
+      const maxTokens = validatePositiveNumber(
+        mergedOptions.maxTokens,
+        'max-tokens',
+        '1000000'
+      );
+
+      // Parse header levels
+      const headerLevel = validateHeaderLevel(
+        mergedOptions.headerLevel || mergedOptions.styling?.headerStyle?.mainTitle,
+        'header-level',
+        '1'
+      );
+
+      const sectionLevel = validateHeaderLevel(
+        mergedOptions.sectionLevel || mergedOptions.styling?.headerStyle?.sectionTitle,
+        'section-level', 
+        '2'
+      );
+
+      const fileLevel = validateHeaderLevel(
+        mergedOptions.fileLevel || mergedOptions.styling?.headerStyle?.fileTitle,
+        'file-level',
+        '3'
+      );
+
+      const maxInlineLength = validatePositiveNumber(
+        mergedOptions.maxInlineLength || mergedOptions.styling?.codeStyle?.maxInlineLength,
+        'max-inline-length',
+        '50'
+      );
 
       const conversionOptions = {
-        includeHidden: options.includeHidden,
+        includeHidden: mergedOptions.includeHidden,
         maxFileSize,
         maxTokens,
-        excludePatterns: options.exclude.split(',').map((p: string) => p.trim()),
-        includePatterns: options.include.split(',').map((p: string) => p.trim()),
-        outputFormat: options.format as 'markdown' | 'json',
-        includeMetadata: options.metadata !== false,
-        useASTAnalysis: options.astAnalysis !== false
+        excludePatterns: processPatterns(mergedOptions.exclude || mergedOptions.excludePatterns),
+        includePatterns: processPatterns(mergedOptions.include || mergedOptions.includePatterns),
+        outputFormat: (mergedOptions.format || mergedOptions.outputFormat) as 'markdown' | 'json',
+        includeMetadata: mergedOptions.metadata !== false && mergedOptions.includeMetadata !== false,
+        useASTAnalysis: mergedOptions.astAnalysis !== false && mergedOptions.useASTAnalysis !== false,
+        styling: {
+          headerStyle: {
+            mainTitle: headerLevel,
+            sectionTitle: sectionLevel,
+            fileTitle: fileLevel
+          },
+          listStyle: {
+            tocBullet: mergedOptions.tocBullet || mergedOptions.styling?.listStyle?.tocBullet || '-',
+            structureBullet: mergedOptions.structureBullet || mergedOptions.styling?.listStyle?.structureBullet || '├──'
+          },
+          codeStyle: {
+            useInlineCode: mergedOptions.inlineCode || mergedOptions.styling?.codeStyle?.useInlineCode || false,
+            maxInlineLength,
+            showLineNumbers: mergedOptions.lineNumbers || mergedOptions.styling?.codeStyle?.showLineNumbers || false
+          }
+        }
       };
 
       const autoMarkdown = new AutoMarkdown(conversionOptions);
@@ -74,7 +172,7 @@ program
       console.log(chalk.blue('Understanding dependencies...'));
 
       let output: string;
-      if (options.format === 'json') {
+      if (conversionOptions.outputFormat === 'json') {
         console.log(chalk.blue('Optimizing for JSON format...'));
         output = await autoMarkdown.convertToJson(projectPath);
       } else {
@@ -143,7 +241,25 @@ program
         "main.py",
         "index.js"
       ],
-      includeMetadata: true
+      includeMetadata: true,
+      useASTAnalysis: true,
+      maxTokens: 1000000,
+      styling: {
+        headerStyle: {
+          mainTitle: 1,
+          sectionTitle: 2,
+          fileTitle: 3
+        },
+        listStyle: {
+          tocBullet: "-",
+          structureBullet: "├──"
+        },
+        codeStyle: {
+          useInlineCode: false,
+          maxInlineLength: 50,
+          showLineNumbers: false
+        }
+      }
     };
 
     fs.writeFileSync('automarkdown.config.json', JSON.stringify(configContent, null, 2));
@@ -188,6 +304,22 @@ program
       {
         title: 'Disable AST analysis (faster but less accurate)',
         command: 'automarkdown ./my-project --no-ast-analysis'
+      },
+      {
+        title: 'Custom header levels',
+        command: 'automarkdown ./my-project --header-level 2 --section-level 3 --file-level 4'
+      },
+      {
+        title: 'Use numbered lists for TOC',
+        command: 'automarkdown ./my-project --toc-bullet "1."'
+      },
+      {
+        title: 'Use inline code for small snippets',
+        command: 'automarkdown ./my-project --inline-code --max-inline-length 100'
+      },
+      {
+        title: 'Add line numbers to code blocks',
+        command: 'automarkdown ./my-project --line-numbers'
       }
     ];
 

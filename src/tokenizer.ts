@@ -27,9 +27,17 @@ export class TokenCounter {
   ];
 
   static estimateTokens(text: string): number {
+    if (!text || typeof text !== 'string') {
+      return 0;
+    }
+    
     // More accurate token estimation
     // Remove excessive whitespace and normalize
     const normalized = text.replace(/\s+/g, ' ').trim();
+    
+    if (normalized.length === 0) {
+      return 0;
+    }
     
     // Rough estimation: 1 token ≈ 4 characters for English text
     // Code tends to have more tokens per character due to symbols
