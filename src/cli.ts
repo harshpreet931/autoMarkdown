@@ -6,10 +6,11 @@ import * as path from 'path';
 import chalk from 'chalk';
 import AutoMarkdown from './index';
 import { TokenCounter } from './tokenizer';
+import { ConversionOptions } from './types';
 
 const program = new Command();
 
-function loadConfig(): Partial<any> {
+function loadConfig(): Partial<ConversionOptions> {
   const configFiles = ['automarkdown.config.json', '.automarkdownrc.json', '.automarkdownrc'];
   for (const configFile of configFiles) {
     if (fs.existsSync(configFile)) {
@@ -83,9 +84,9 @@ program
         process.exit(1);
       }
 
-      const maxTokens = parseInt(mergedOptions.maxTokens || mergedOptions.maxTokens);
+      const maxTokens = parseInt(mergedOptions.maxTokens || '1000000');
       if (isNaN(maxTokens) || maxTokens <= 0) {
-        console.error(chalk.red(`Error: Invalid max-tokens "${mergedOptions.maxTokens || mergedOptions.maxTokens}". Must be a positive number.`));
+        console.error(chalk.red(`Error: Invalid max-tokens "${mergedOptions.maxTokens}". Must be a positive number.`));
         process.exit(1);
       }
 
@@ -118,9 +119,9 @@ program
         includeHidden: mergedOptions.includeHidden,
         maxFileSize,
         maxTokens,
-        excludePatterns: (mergedOptions.exclude || mergedOptions.excludePatterns)?.split(',').map((p: string) => p.trim()),
-        includePatterns: (mergedOptions.include || mergedOptions.includePatterns)?.split(',').map((p: string) => p.trim()),
-        outputFormat: mergedOptions.format || mergedOptions.outputFormat as 'markdown' | 'json',
+        excludePatterns: (mergedOptions.exclude || mergedOptions.excludePatterns)?.split(',').map((p: string) => p.trim()) || [],
+        includePatterns: (mergedOptions.include || mergedOptions.includePatterns)?.split(',').map((p: string) => p.trim()) || [],
+        outputFormat: (mergedOptions.format || mergedOptions.outputFormat) as 'markdown' | 'json',
         includeMetadata: mergedOptions.metadata !== false && mergedOptions.includeMetadata !== false,
         useASTAnalysis: mergedOptions.astAnalysis !== false && mergedOptions.useASTAnalysis !== false,
         styling: {
@@ -146,7 +147,7 @@ program
       console.log(chalk.blue('Understanding dependencies...'));
 
       let output: string;
-      if (options.format === 'json') {
+      if (conversionOptions.outputFormat === 'json') {
         console.log(chalk.blue('Optimizing for JSON format...'));
         output = await autoMarkdown.convertToJson(projectPath);
       } else {
