@@ -39,6 +39,44 @@ npx automarkdown . -o docs.md
 
 # JSON format
 npx automarkdown . -f json
+
+# Enable verbose logging
+npx automarkdown . -v
+
+# Custom ignore patterns
+npx automarkdown . --exclude "tests/**,*.spec.ts"
+
+# Include hidden files
+npx automarkdown . --include-hidden
+```
+
+## Configuration
+
+### Ignore Files
+
+AutoMarkdown supports two types of ignore files:
+
+1. `.gitignore` - Uses your existing Git ignore patterns
+2. `.automarkdownignore` - Specific patterns for AutoMarkdown
+
+Create a `.automarkdownignore` file in your project root to exclude files from processing:
+
+```
+# Dependencies
+node_modules/
+__pycache__/
+
+# Build outputs
+dist/
+build/
+
+# Lock files
+package-lock.json
+yarn.lock
+
+# IDE files
+.vscode/
+.idea/
 ```
 
 ## Output

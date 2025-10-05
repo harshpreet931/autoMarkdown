@@ -1,5 +1,5 @@
 import { ParsedProject, FileInfo, ProjectStructure, ConversionOptions } from './types';
-import { TokenCounter } from './tokenizer';
+
 
 export class MarkdownConverter {
   private options: ConversionOptions;
@@ -50,7 +50,7 @@ export class MarkdownConverter {
       '',
       '- [Project Summary](#project-summary)',
       '- [Project Structure](#project-structure)',
-      '- [File Contents](#file-contents)'
+      '- [File Contents](#file-contents)',
     ];
 
     // Add file links
@@ -63,9 +63,9 @@ export class MarkdownConverter {
   }
 
   private generateProjectSummary(project: ParsedProject): string {
-    const languages = [...new Set(project.files.map(f => f.language))];
+    const languages = [...new Set(project.files.map((f) => f.language))];
     const totalSize = project.files.reduce((sum, f) => sum + f.size, 0);
-    
+
     return `## Project Summary
 
 ${project.summary}
@@ -74,7 +74,10 @@ ${project.summary}
 - **Total Files**: ${project.files.length}
 - **Languages**: ${languages.join(', ')}
 - **Total Size**: ${(totalSize / 1024).toFixed(2)} KB
-- **Most Important Files**: ${project.files.slice(0, 5).map(f => f.path).join(', ')}`;
+- **Most Important Files**: ${project.files
+      .slice(0, 5)
+      .map((f) => f.path)
+      .join(', ')}`;
   }
 
   private generateProjectStructure(structure: ProjectStructure, level: number = 0): string {
@@ -85,7 +88,7 @@ ${project.summary}
 ${this.renderStructureTree(structure, 0)}
 \`\`\``;
     }
-    
+
     return this.renderStructureTree(structure, level);
   }
 
@@ -95,7 +98,7 @@ ${this.renderStructureTree(structure, 0)}
     let result = `${indent}${icon} ${structure.name}\n`;
 
     if (structure.children) {
-      structure.children.forEach(child => {
+      structure.children.forEach((child) => {
         result += this.renderStructureTree(child, level + 1);
       });
     }
@@ -116,7 +119,7 @@ ${this.renderStructureTree(structure, 0)}
         '',
         '```' + file.language,
         file.content,
-        '```'
+        '```',
       ];
 
       sections.push(fileSection.join('\n'));
@@ -180,7 +183,11 @@ ${this.renderStructureTree(structure, 0)}
     return {
       ...project,
       files: includedFiles,
-      summary: this.updateSummaryWithFiltering(project.summary, includedFiles.length, project.files.length)
+      summary: this.updateSummaryWithFiltering(
+        project.summary,
+        includedFiles.length,
+        project.files.length
+      ),
     };
   }
 
@@ -197,7 +204,11 @@ ${this.renderStructureTree(structure, 0)}
     return contentTokens + metadataTokens;
   }
 
-  private updateSummaryWithFiltering(originalSummary: string, includedFiles: number, totalFiles: number): string {
+  private updateSummaryWithFiltering(
+    originalSummary: string,
+    includedFiles: number,
+    totalFiles: number
+  ): string {
     if (includedFiles === totalFiles) {
       return originalSummary;
     }

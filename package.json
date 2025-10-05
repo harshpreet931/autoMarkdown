@@ -11,7 +11,11 @@
     "dev": "tsc --watch",
     "start": "node dist/cli.js",
     "test": "echo \"No tests yet\" && exit 0",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\""
   },
   "keywords": [
     "markdown",
@@ -38,6 +42,7 @@
     "@typescript-eslint/parser": "^6.0.0",
     "eslint": "^8.0.0",
     "jest": "^29.0.0",
+    "prettier": "^3.6.2",
     "typescript": "^5.0.0"
   },
   "dependencies": {

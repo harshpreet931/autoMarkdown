@@ -4,10 +4,12 @@ import { glob } from 'glob';
 import ignore from 'ignore';
 import { FileInfo, ParsedProject, ProjectStructure, ConversionOptions } from './types';
 import { ASTAnalyzer, ASTMetrics } from './ast-analyzer';
+import { Logger } from './logger';
 
 export class CodebaseParser {
   private options: ConversionOptions;
   private gitIgnore: ReturnType<typeof ignore> | null = null;
+  private automarkdownIgnore: ReturnType<typeof ignore> | null = null;
   private astAnalyzer: ASTAnalyzer;
 
   constructor(options: ConversionOptions = {}) {
@@ -20,19 +22,61 @@ export class CodebaseParser {
       'automarkdown/**',
       '*.log',
       // Lock files (huge and not useful for LLM analysis)
-      'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml', 'bun.lockb',
-      'Pipfile.lock', 'poetry.lock', 'Cargo.lock', 'composer.lock',
-      'Gemfile.lock', 'go.sum', 'mix.lock',
+      'package-lock.json',
+      'yarn.lock',
+      'pnpm-lock.yaml',
+      'bun.lockb',
+      'Pipfile.lock',
+      'poetry.lock',
+      'Cargo.lock',
+      'composer.lock',
+      'Gemfile.lock',
+      'go.sum',
+      'mix.lock',
       // Images and media
-      '*.png', '*.jpg', '*.jpeg', '*.gif', '*.bmp', '*.tiff', '*.webp', '*.svg',
-      '*.mp4', '*.avi', '*.mov', '*.wmv', '*.flv', '*.webm',
-      '*.mp3', '*.wav', '*.ogg', '*.flac', '*.aac',
+      '*.png',
+      '*.jpg',
+      '*.jpeg',
+      '*.gif',
+      '*.bmp',
+      '*.tiff',
+      '*.webp',
+      '*.svg',
+      '*.mp4',
+      '*.avi',
+      '*.mov',
+      '*.wmv',
+      '*.flv',
+      '*.webm',
+      '*.mp3',
+      '*.wav',
+      '*.ogg',
+      '*.flac',
+      '*.aac',
       // Documents and archives
-      '*.pdf', '*.doc', '*.docx', '*.xls', '*.xlsx', '*.ppt', '*.pptx',
-      '*.zip', '*.tar', '*.gz', '*.rar', '*.7z',
+      '*.pdf',
+      '*.doc',
+      '*.docx',
+      '*.xls',
+      '*.xlsx',
+      '*.ppt',
+      '*.pptx',
+      '*.zip',
+      '*.tar',
+      '*.gz',
+      '*.rar',
+      '*.7z',
       // Executables and fonts
-      '*.exe', '*.dmg', '*.app', '*.deb', '*.rpm',
-      '*.ico', '*.ttf', '*.woff', '*.woff2', '*.eot'
+      '*.exe',
+      '*.dmg',
+      '*.app',
+      '*.deb',
+      '*.rpm',
+      '*.ico',
+      '*.ttf',
+      '*.woff',
+      '*.woff2',
+      '*.eot',
     ];
 
     this.options = {
@@ -45,10 +89,7 @@ export class CodebaseParser {
       useASTAnalysis: true,
       ...options,
       // Ensure exclude patterns are not overridden by spread - always merge with defaults
-      excludePatterns: [
-        ...defaultExcludePatterns,
-        ...(options.excludePatterns || [])
-      ]
+      excludePatterns: [...defaultExcludePatterns, ...(options.excludePatterns || [])],
     };
 
     this.astAnalyzer = new ASTAnalyzer();
@@ -66,18 +107,18 @@ export class CodebaseParser {
     }
 
     const structure = await this.buildProjectStructure(projectPath);
-    const summary = this.generateProjectSummary(files, structure);
+    const summary = this.generateProjectSummary(files);
 
     return {
       files: files.sort((a, b) => b.importance - a.importance),
       structure,
-      summary
+      summary,
     };
   }
 
   private async loadGitIgnore(projectPath: string): Promise<void> {
+    // Load .gitignore
     const gitIgnorePath = path.join(projectPath, '.gitignore');
-
     try {
       const gitIgnoreContent = await fs.promises.readFile(gitIgnorePath, 'utf-8');
       this.gitIgnore = ignore().add(gitIgnoreContent);
@@ -85,21 +126,39 @@ export class CodebaseParser {
       // .gitignore doesn't exist or can't be read - that's fine
       this.gitIgnore = null;
     }
+
+    // Load .automarkdownignore
+    const automarkdownIgnorePath = path.join(projectPath, '.automarkdownignore');
+    try {
+      const automarkdownIgnoreContent = await fs.promises.readFile(automarkdownIgnorePath, 'utf-8');
+      this.automarkdownIgnore = ignore().add(automarkdownIgnoreContent);
+    } catch (error) {
+      // .automarkdownignore doesn't exist or can't be read - that's fine
+      this.automarkdownIgnore = null;
+    }
   }
 
   private async getProjectFiles(projectPath: string): Promise<FileInfo[]> {
     const files: FileInfo[] = [];
-    
+    Logger.debug(`Starting file scan in: ${projectPath}`);
+
     for (const pattern of this.options.includePatterns!) {
       const matches = await glob(pattern, {
         cwd: projectPath,
         ignore: this.options.excludePatterns,
-        dot: this.options.includeHidden
+        dot: this.options.includeHidden,
       });
 
       for (const match of matches) {
+        Logger.debug(`Processing file: ${match}`);
         // Check gitignore patterns first
         if (this.gitIgnore && this.gitIgnore.ignores(match)) {
+          Logger.debug(`Skipping file (gitignore): ${match}`);
+          continue;
+        }
+        // Check automarkdownignore patterns
+        if (this.automarkdownIgnore && this.automarkdownIgnore.ignores(match)) {
+          Logger.debug(`Skipping file (automarkdownignore): ${match}`);
           continue;
         }
 
@@ -125,7 +184,7 @@ export class CodebaseParser {
               content,
               language: this.detectLanguage(match),
               size: stat.size,
-              importance: this.calculateImportance(match, content)
+              importance: this.calculateImportance(match, content),
             };
             files.push(fileInfo);
           } catch (error) {
@@ -140,22 +199,24 @@ export class CodebaseParser {
   }
 
   private async buildProjectStructure(projectPath: string): Promise<ProjectStructure> {
-    
-    const buildStructure = async (currentPath: string, relativePath: string = ''): Promise<ProjectStructure> => {
+    const buildStructure = async (
+      currentPath: string,
+      relativePath: string = ''
+    ): Promise<ProjectStructure> => {
       const stat = await fs.promises.stat(currentPath);
       const itemName = path.basename(currentPath);
-      
+
       if (stat.isFile()) {
         return {
           name: itemName,
           type: 'file',
-          path: relativePath
+          path: relativePath,
         };
       } else {
         const children: ProjectStructure[] = [];
         try {
           const items = await fs.promises.readdir(currentPath);
-          
+
           for (const item of items) {
             const itemRelativePath = path.join(relativePath, item);
             if (this.shouldIncludeInStructure(item, itemRelativePath)) {
@@ -167,7 +228,7 @@ export class CodebaseParser {
         } catch (error) {
           // Skip directories we can't read
         }
-        
+
         return {
           name: itemName,
           type: 'directory',
@@ -177,7 +238,7 @@ export class CodebaseParser {
             }
             return a.name.localeCompare(b.name);
           }),
-          path: relativePath
+          path: relativePath,
         };
       }
     };
@@ -189,21 +250,65 @@ export class CodebaseParser {
     const ext = path.extname(filePath).toLowerCase();
     const binaryExtensions = [
       // Images
-      '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff', '.webp', '.svg', '.ico',
+      '.png',
+      '.jpg',
+      '.jpeg',
+      '.gif',
+      '.bmp',
+      '.tiff',
+      '.webp',
+      '.svg',
+      '.ico',
       // Videos
-      '.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm', '.mkv',
+      '.mp4',
+      '.avi',
+      '.mov',
+      '.wmv',
+      '.flv',
+      '.webm',
+      '.mkv',
       // Audio
-      '.mp3', '.wav', '.ogg', '.flac', '.aac', '.m4a',
+      '.mp3',
+      '.wav',
+      '.ogg',
+      '.flac',
+      '.aac',
+      '.m4a',
       // Archives
-      '.zip', '.tar', '.gz', '.rar', '.7z', '.bz2', '.xz',
+      '.zip',
+      '.tar',
+      '.gz',
+      '.rar',
+      '.7z',
+      '.bz2',
+      '.xz',
       // Documents
-      '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+      '.pdf',
+      '.doc',
+      '.docx',
+      '.xls',
+      '.xlsx',
+      '.ppt',
+      '.pptx',
       // Executables
-      '.exe', '.dmg', '.app', '.deb', '.rpm', '.msi',
+      '.exe',
+      '.dmg',
+      '.app',
+      '.deb',
+      '.rpm',
+      '.msi',
       // Fonts
-      '.ttf', '.woff', '.woff2', '.eot', '.otf',
+      '.ttf',
+      '.woff',
+      '.woff2',
+      '.eot',
+      '.otf',
       // Other binary formats
-      '.bin', '.dat', '.db', '.sqlite', '.sqlite3'
+      '.bin',
+      '.dat',
+      '.db',
+      '.sqlite',
+      '.sqlite3',
     ];
     return binaryExtensions.includes(ext);
   }
@@ -215,7 +320,10 @@ export class CodebaseParser {
     }
 
     // Check for high ratio of non-printable characters
-    const nonPrintableCount = (content.match(/[\x00-\x08\x0E-\x1F\x7F-\xFF]/g) || []).length;
+    const nonPrintableCount = content.split('').filter(char => {
+      const code = char.charCodeAt(0);
+      return (code <= 0x08) || (code >= 0x0E && code <= 0x1F) || (code >= 0x7F && code <= 0xFF);
+    }).length;
     const ratio = nonPrintableCount / content.length;
 
     // If more than 30% of characters are non-printable, consider it binary
@@ -228,8 +336,13 @@ export class CodebaseParser {
       return false;
     }
 
+    // Check automarkdownignore patterns
+    if (this.automarkdownIgnore && this.automarkdownIgnore.ignores(itemRelativePath)) {
+      return false;
+    }
+
     // Use the same exclusion patterns as file content filtering
-    const excluded = this.options.excludePatterns!.some(pattern => {
+    const excluded = this.options.excludePatterns!.some((pattern) => {
       // Handle different pattern types
       if (pattern.includes('**')) {
         // Handle directory patterns like node_modules/** or dist/**
@@ -250,7 +363,7 @@ export class CodebaseParser {
     });
 
     // Also exclude hidden files (starting with .) unless explicitly included
-    return !excluded && (!itemName.startsWith('.') || (this.options.includeHidden || false));
+    return !excluded && (!itemName.startsWith('.') || this.options.includeHidden || false);
   }
 
   private detectLanguage(filePath: string): string {
@@ -300,7 +413,7 @@ export class CodebaseParser {
       '.txt': 'text',
       '.dockerfile': 'dockerfile',
       '.vue': 'vue',
-      '.svelte': 'svelte'
+      '.svelte': 'svelte',
     };
 
     return languageMap[ext] || 'text';
@@ -308,15 +421,19 @@ export class CodebaseParser {
 
   private calculateImportance(filePath: string, content: string): number {
     let importance = 1;
-    
+
     // Prioritize certain files
     const fileName = path.basename(filePath).toLowerCase();
-    if (this.options.prioritizeFiles!.some(pf => fileName.includes(pf.toLowerCase()))) {
+    if (this.options.prioritizeFiles!.some((pf) => fileName.includes(pf.toLowerCase()))) {
       importance += 10;
     }
 
     // Configuration files
-    if (['package.json', 'requirements.txt', 'cargo.toml', 'pom.xml', 'build.gradle'].includes(fileName)) {
+    if (
+      ['package.json', 'requirements.txt', 'cargo.toml', 'pom.xml', 'build.gradle'].includes(
+        fileName
+      )
+    ) {
       importance += 8;
     }
 
@@ -343,17 +460,27 @@ export class CodebaseParser {
     }
 
     // Code complexity indicators
-    const complexityKeywords = ['class', 'function', 'def', 'interface', 'type', 'export', 'import'];
+    const complexityKeywords = [
+      'class',
+      'function',
+      'def',
+      'interface',
+      'type',
+      'export',
+      'import',
+    ];
     const keywordCount = complexityKeywords.reduce((count, keyword) => {
       return count + (content.match(new RegExp(`\\b${keyword}\\b`, 'g')) || []).length;
     }, 0);
-    
+
     importance += Math.min(keywordCount / 10, 3);
 
     return Math.max(importance, 0);
   }
 
   private async performASTAnalysis(files: FileInfo[]): Promise<void> {
+    Logger.debug(`Starting AST analysis for ${files.length} files...`);
+
     // Analyze files in parallel for better performance
     const analysisPromises = files.map(async (file) => {
       try {
@@ -366,7 +493,7 @@ export class CodebaseParser {
           functionCount: metrics.functionCount,
           classCount: metrics.classCount,
           complexity: metrics.complexity,
-          centrality: 0 // Will be updated after dependency graph calculation
+          centrality: 0, // Will be updated after dependency graph calculation
         };
 
         return { path: file.path, metrics };
@@ -378,48 +505,61 @@ export class CodebaseParser {
 
     // Wait for all analyses to complete
     const results = await Promise.all(analysisPromises);
-    const filesWithMetrics = results.filter((result): result is {path: string, metrics: ASTMetrics} => result !== null);
+    const filesWithMetrics = results.filter(
+      (result): result is { path: string; metrics: ASTMetrics } => result !== null
+    );
 
     // Build dependency graph and calculate centrality
     if (filesWithMetrics.length > 0) {
       const dependencyGraph = this.astAnalyzer.buildDependencyGraph(filesWithMetrics);
 
+      Logger.debug(`Calculating centrality scores for ${files.length} files...`);
+
       // Update centrality scores in file info
-      files.forEach(file => {
+      files.forEach((file) => {
         if (file.astMetrics && dependencyGraph[file.path]) {
           file.astMetrics.centrality = dependencyGraph[file.path].centrality;
         }
       });
 
       // Recalculate importance scores with AST data
-      files.forEach(file => {
+      files.forEach((file) => {
         if (file.astMetrics) {
           const astImportance = this.astAnalyzer.calculateASTImportance(
-            filesWithMetrics.find(f => f.path === file.path)?.metrics || {} as ASTMetrics,
+            filesWithMetrics.find((f) => f.path === file.path)?.metrics || ({} as ASTMetrics),
             file.astMetrics.centrality
           );
 
           // Combine traditional heuristics with AST analysis (weighted average)
-          file.importance = (file.importance * 0.3) + (astImportance * 0.7);
+          file.importance = file.importance * 0.3 + astImportance * 0.7;
         }
       });
     }
   }
 
-  private generateProjectSummary(files: FileInfo[], _structure: ProjectStructure): string {
+  private generateProjectSummary(files: FileInfo[]): string {
     const totalFiles = files.length;
-    const languages = [...new Set(files.map(f => f.language))];
+    const languages = [...new Set(files.map((f) => f.language))];
     const totalSize = files.reduce((sum, f) => sum + f.size, 0);
 
     let summary = `Project contains ${totalFiles} files in ${languages.length} different languages (${languages.join(', ')}). Total size: ${(totalSize / 1024).toFixed(2)} KB.`;
 
     // Add AST analysis summary if enabled
     if (this.options.useASTAnalysis) {
-      const filesWithAST = files.filter(f => f.astMetrics);
+      const filesWithAST = files.filter((f) => f.astMetrics);
       if (filesWithAST.length > 0) {
-        const totalExports = filesWithAST.reduce((sum, f) => sum + (f.astMetrics?.exportCount || 0), 0);
-        const totalFunctions = filesWithAST.reduce((sum, f) => sum + (f.astMetrics?.functionCount || 0), 0);
-        const totalClasses = filesWithAST.reduce((sum, f) => sum + (f.astMetrics?.classCount || 0), 0);
+        const totalExports = filesWithAST.reduce(
+          (sum, f) => sum + (f.astMetrics?.exportCount || 0),
+          0
+        );
+        const totalFunctions = filesWithAST.reduce(
+          (sum, f) => sum + (f.astMetrics?.functionCount || 0),
+          0
+        );
+        const totalClasses = filesWithAST.reduce(
+          (sum, f) => sum + (f.astMetrics?.classCount || 0),
+          0
+        );
 
         summary += ` AST Analysis: ${totalExports} exports, ${totalFunctions} functions, ${totalClasses} classes across ${filesWithAST.length} analyzed files.`;
       }
