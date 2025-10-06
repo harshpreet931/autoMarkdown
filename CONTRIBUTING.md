@@ -46,14 +46,23 @@ This repository participates in Hacktoberfest! Look for issues labeled `hacktobe
 2. **Use descriptive branch names**: `fix/parser-bug` or `feat/output-styling`
 3. **Write clear commit messages** that explain what and why
 4. **Link the issue in your PR description**: `Fixes #123` or `Closes #456`
-5. **Ensure all tests pass** and the build succeeds
+5. **Ensure all tests pass** and the build succeeds:
+   - Run `npm run format:check` to verify code formatting
+   - Run `npm run lint` to check for code quality issues
+   - Run `npm test` to run the test suite
+   - Verify that GitHub Actions CI passes
 6. **Update documentation** if you're adding new features
 
-### Code Style
+### Code Style & Development
 - Follow existing TypeScript/JavaScript conventions
 - Use meaningful variable and function names
 - Add JSDoc comments for new public methods
 - Ensure TypeScript compilation passes with no errors
+- Run `npm run format` before committing to ensure consistent style
+- Run `npm run lint` to check for potential issues
+- Use the `--verbose` flag when testing locally for detailed logging
+- Test changes with the full CI pipeline locally
+- Create or update `.automarkdownignore` file as needed for new file types
 
 ### Types of Contributions We Welcome
 
