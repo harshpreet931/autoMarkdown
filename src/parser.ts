@@ -361,7 +361,7 @@ export class CodebaseParser {
     });
 
     // Also exclude hidden files (starting with .) unless explicitly included
-    return !excluded && (!itemName.startsWith('.') || this.options.includeHidden || false);
+    return !excluded && (!itemName.startsWith('.') || this.options.includeHidden);
   }
 
   private detectLanguage(filePath: string): string {
