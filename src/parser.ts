@@ -320,12 +320,10 @@ export class CodebaseParser {
     }
 
     // Check for high ratio of non-printable characters
-    const nonPrintableCount = content.split('').filter(char => {
-      const code = char.charCodeAt(0);
-      return (code <= 0x08) || (code >= 0x0E && code <= 0x1F) || (code >= 0x7F && code <= 0xFF);
-    }).length;
+    // Use regex to count non-printable characters for better performance
+    const nonPrintableMatches = content.match(/[\x00-\x08\x0E-\x1F\x7F-\xFF]/g);
+    const nonPrintableCount = nonPrintableMatches ? nonPrintableMatches.length : 0;
     const ratio = nonPrintableCount / content.length;
-
     // If more than 30% of characters are non-printable, consider it binary
     return ratio > 0.3;
   }
