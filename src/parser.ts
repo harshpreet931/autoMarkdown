@@ -6,7 +6,7 @@ import { FileInfo, ParsedProject, ProjectStructure, ConversionOptions } from './
 import { ASTAnalyzer, ASTMetrics } from './ast-analyzer';
 import { Logger } from './logger';
 
-export class CodebaseParser {
+export class Parser {
   private options: ConversionOptions;
   private gitIgnore: ReturnType<typeof ignore> | null = null;
   private automarkdownIgnore: ReturnType<typeof ignore> | null = null;
@@ -95,7 +95,17 @@ export class CodebaseParser {
     this.astAnalyzer = new ASTAnalyzer();
   }
 
-  async parseProject(projectPath: string): Promise<ParsedProject> {
+  async parseFile(filePath: string): Promise<ParsedProject & { metrics: { exportCount: number; importCount: number; functionCount: number } }> {
+    const projectPath = path.dirname(filePath);
+    
+    // Ensure temp directory exists
+    await fs.promises.mkdir(projectPath, { recursive: true });
+    
+    const content = await fs.promises.readFile(filePath, 'utf-8');
+    
+    // Initialize astAnalyzer if not already done
+    this.astAnalyzer = this.astAnalyzer || new ASTAnalyzer();
+    
     // Load .gitignore patterns if available
     await this.loadGitIgnore(projectPath);
 
@@ -109,10 +119,17 @@ export class CodebaseParser {
     const structure = await this.buildProjectStructure(projectPath);
     const summary = this.generateProjectSummary(files);
 
+    const metrics = await this.astAnalyzer.analyzeFile(filePath, content, this.detectLanguage(filePath));
+
     return {
       files: files.sort((a, b) => b.importance - a.importance),
       structure,
       summary,
+      metrics: {
+        exportCount: metrics.exportCount,
+        importCount: metrics.importCount,
+        functionCount: metrics.functionCount
+      }
     };
   }
 
@@ -361,7 +378,7 @@ export class CodebaseParser {
     });
 
     // Also exclude hidden files (starting with .) unless explicitly included
-    return !excluded && (!itemName.startsWith('.') || this.options.includeHidden);
+    return !excluded && (!itemName.startsWith('.') || this.options.includeHidden || false);
   }
 
   private detectLanguage(filePath: string): string {

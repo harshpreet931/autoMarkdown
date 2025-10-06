@@ -2,6 +2,13 @@ import { parse as parseTypeScript } from '@typescript-eslint/typescript-estree';
 import { parse as parseJavaScript } from 'acorn';
 import * as path from 'path';
 
+// Disable the any type warning for the AST nodes as they're from external libraries
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type ASTNode = {
+  type: string;
+  [key: string]: any;
+};
+
 export interface ASTMetrics {
   exportCount: number;
   importCount: number;
@@ -125,7 +132,7 @@ export class ASTAnalyzer {
     return metrics;
   }
 
-  private walkTypeScriptAST(node: any, metrics: ASTMetrics): void {
+  private walkTypeScriptAST(node: ASTNode, metrics: ASTMetrics): void {
     if (!node || typeof node !== 'object') return;
 
     switch (node.type) {
@@ -225,7 +232,7 @@ export class ASTAnalyzer {
     return metrics;
   }
 
-  private walkJavaScriptAST(node: any, metrics: ASTMetrics): void {
+  private walkJavaScriptAST(node: ASTNode, metrics: ASTMetrics): void {
     if (!node || typeof node !== 'object') return;
 
     switch (node.type) {
@@ -342,7 +349,7 @@ export class ASTAnalyzer {
       /^from\s+\w+\s+import/gm, // Python
       /^use\s+/gm, // Rust
       /^require\s*\(/gm, // Node.js
-      /^\s*\@import/gm, // CSS
+      /^\s*@import/gm, // CSS
     ];
 
     importPatterns.forEach((pattern) => {
@@ -403,7 +410,7 @@ export class ASTAnalyzer {
     return metrics;
   }
 
-  private extractExportNames(node: any, metrics: ASTMetrics): void {
+  private extractExportNames(node: ASTNode, metrics: ASTMetrics): void {
     if (!node) return;
 
     if (node.type === 'FunctionDeclaration' && node.id?.name) {
@@ -454,7 +461,7 @@ export class ASTAnalyzer {
 
       // Recursively walk all child nodes
       for (const key in n) {
-        if (n.hasOwnProperty(key)) {
+        if (Object.prototype.hasOwnProperty.call(n, key)) {
           const child = n[key];
           if (Array.isArray(child)) {
             child.forEach(walk);
