@@ -2,6 +2,13 @@ import { parse as parseTypeScript } from '@typescript-eslint/typescript-estree';
 import { parse as parseJavaScript } from 'acorn';
 import * as path from 'path';
 
+// Disable the any type warning for the AST nodes as they're from external libraries
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type ASTNode = {
+  type: string;
+  [key: string]: any;
+};
+
 export interface ASTMetrics {
   exportCount: number;
   importCount: number;
@@ -71,7 +78,7 @@ export class ASTAnalyzer {
       isEntryPoint: false,
       isTestFile: false,
       isConfigFile: false,
-      publicMethods: 0
+      publicMethods: 0,
     };
 
     // Detect file characteristics
@@ -113,7 +120,7 @@ export class ASTAnalyzer {
         range: true,
         tokens: false,
         comment: false,
-        jsx: true
+        jsx: true,
       });
 
       this.walkTypeScriptAST(ast, metrics);
@@ -125,7 +132,7 @@ export class ASTAnalyzer {
     return metrics;
   }
 
-  private walkTypeScriptAST(node: any, metrics: ASTMetrics): void {
+  private walkTypeScriptAST(node: ASTNode, metrics: ASTMetrics): void {
     if (!node || typeof node !== 'object') return;
 
     switch (node.type) {
@@ -200,7 +207,7 @@ export class ASTAnalyzer {
       if (key === 'parent' || key === 'leadingComments' || key === 'trailingComments') continue;
       const child = node[key];
       if (Array.isArray(child)) {
-        child.forEach(item => this.walkTypeScriptAST(item, metrics));
+        child.forEach((item) => this.walkTypeScriptAST(item, metrics));
       } else if (child && typeof child === 'object') {
         this.walkTypeScriptAST(child, metrics);
       }
@@ -213,7 +220,7 @@ export class ASTAnalyzer {
         ecmaVersion: 2022,
         sourceType: 'module',
         allowImportExportEverywhere: true,
-        allowAwaitOutsideFunction: true
+        allowAwaitOutsideFunction: true,
       });
 
       this.walkJavaScriptAST(ast, metrics);
@@ -225,7 +232,7 @@ export class ASTAnalyzer {
     return metrics;
   }
 
-  private walkJavaScriptAST(node: any, metrics: ASTMetrics): void {
+  private walkJavaScriptAST(node: ASTNode, metrics: ASTMetrics): void {
     if (!node || typeof node !== 'object') return;
 
     switch (node.type) {
@@ -274,7 +281,7 @@ export class ASTAnalyzer {
     for (const key in node) {
       const child = node[key];
       if (Array.isArray(child)) {
-        child.forEach(item => this.walkJavaScriptAST(item, metrics));
+        child.forEach((item) => this.walkJavaScriptAST(item, metrics));
       } else if (child && typeof child === 'object') {
         this.walkJavaScriptAST(child, metrics);
       }
@@ -293,12 +300,12 @@ export class ASTAnalyzer {
     const fromImports = content.match(/^from\s+(\w+(?:\.\w+)*)\s+import/gm) || [];
     const directImports = content.match(/^import\s+(\w+(?:\.\w+)*)/gm) || [];
 
-    fromImports.forEach(match => {
+    fromImports.forEach((match) => {
       const dep = match.match(/^from\s+(\w+(?:\.\w+)*)/)?.[1];
       if (dep) metrics.dependencies.push(dep);
     });
 
-    directImports.forEach(match => {
+    directImports.forEach((match) => {
       const dep = match.match(/^import\s+(\w+(?:\.\w+)*)/)?.[1];
       if (dep) metrics.dependencies.push(dep);
     });
@@ -313,13 +320,18 @@ export class ASTAnalyzer {
 
     // Simple complexity calculation for Python
     const complexityPatterns = [
-      /\bif\b/g, /\belif\b/g, /\belse\b/g,
-      /\bfor\b/g, /\bwhile\b/g,
-      /\btry\b/g, /\bexcept\b/g,
-      /\band\b/g, /\bor\b/g
+      /\bif\b/g,
+      /\belif\b/g,
+      /\belse\b/g,
+      /\bfor\b/g,
+      /\bwhile\b/g,
+      /\btry\b/g,
+      /\bexcept\b/g,
+      /\band\b/g,
+      /\bor\b/g,
     ];
 
-    complexityPatterns.forEach(pattern => {
+    complexityPatterns.forEach((pattern) => {
       const matches = content.match(pattern) || [];
       metrics.complexity += matches.length;
     });
@@ -332,57 +344,65 @@ export class ASTAnalyzer {
 
     // Count common import/include patterns
     const importPatterns = [
-      /^#include\s+/gm,        // C/C++
-      /^import\s+/gm,          // Java, Python, JavaScript
+      /^#include\s+/gm, // C/C++
+      /^import\s+/gm, // Java, Python, JavaScript
       /^from\s+\w+\s+import/gm, // Python
-      /^use\s+/gm,             // Rust
-      /^require\s*\(/gm,       // Node.js
-      /^\s*\@import/gm         // CSS
+      /^use\s+/gm, // Rust
+      /^require\s*\(/gm, // Node.js
+      /^\s*@import/gm, // CSS
     ];
 
-    importPatterns.forEach(pattern => {
+    importPatterns.forEach((pattern) => {
       const matches = content.match(pattern) || [];
       metrics.importCount += matches.length;
     });
 
     // Count function definitions across languages
     const functionPatterns = [
-      /\bfunction\s+\w+/g,     // JavaScript
-      /\bdef\s+\w+/g,          // Python
-      /\bfn\s+\w+/g,           // Rust
-      /\w+\s*\([^)]*\)\s*{/g,  // C/C++/Java/Go
-      /\bpublic\s+\w+\s+\w+\s*\(/g // Java methods
+      /\bfunction\s+\w+/g, // JavaScript
+      /\bdef\s+\w+/g, // Python
+      /\bfn\s+\w+/g, // Rust
+      /\w+\s*\([^)]*\)\s*{/g, // C/C++/Java/Go
+      /\bpublic\s+\w+\s+\w+\s*\(/g, // Java methods
     ];
 
-    functionPatterns.forEach(pattern => {
+    functionPatterns.forEach((pattern) => {
       const matches = content.match(pattern) || [];
       metrics.functionCount += matches.length;
     });
 
     // Count class definitions
     const classPatterns = [
-      /\bclass\s+\w+/g,        // Most languages
-      /\bstruct\s+\w+/g,       // C/C++/Rust/Go
-      /\binterface\s+\w+/g,    // Java/TypeScript/Go
-      /\btrait\s+\w+/g         // Rust
+      /\bclass\s+\w+/g, // Most languages
+      /\bstruct\s+\w+/g, // C/C++/Rust/Go
+      /\binterface\s+\w+/g, // Java/TypeScript/Go
+      /\btrait\s+\w+/g, // Rust
     ];
 
-    classPatterns.forEach(pattern => {
+    classPatterns.forEach((pattern) => {
       const matches = content.match(pattern) || [];
       metrics.classCount += matches.length;
     });
 
     // Basic complexity indicators
     const complexityPatterns = [
-      /\bif\b/g, /\belse\b/g, /\belseif\b/g, /\belif\b/g,
-      /\bfor\b/g, /\bwhile\b/g, /\bdo\b/g,
-      /\bswitch\b/g, /\bmatch\b/g,
-      /\btry\b/g, /\bcatch\b/g, /\bexcept\b/g,
+      /\bif\b/g,
+      /\belse\b/g,
+      /\belseif\b/g,
+      /\belif\b/g,
+      /\bfor\b/g,
+      /\bwhile\b/g,
+      /\bdo\b/g,
+      /\bswitch\b/g,
+      /\bmatch\b/g,
+      /\btry\b/g,
+      /\bcatch\b/g,
+      /\bexcept\b/g,
       /\?.*:/g, // Ternary operators
-      /&&|\|\|/g // Logical operators
+      /&&|\|\|/g, // Logical operators
     ];
 
-    complexityPatterns.forEach(pattern => {
+    complexityPatterns.forEach((pattern) => {
       const matches = content.match(pattern) || [];
       metrics.complexity += matches.length;
     });
@@ -390,7 +410,7 @@ export class ASTAnalyzer {
     return metrics;
   }
 
-  private extractExportNames(node: any, metrics: ASTMetrics): void {
+  private extractExportNames(node: ASTNode, metrics: ASTMetrics): void {
     if (!node) return;
 
     if (node.type === 'FunctionDeclaration' && node.id?.name) {
@@ -441,7 +461,7 @@ export class ASTAnalyzer {
 
       // Recursively walk all child nodes
       for (const key in n) {
-        if (n.hasOwnProperty(key)) {
+        if (Object.prototype.hasOwnProperty.call(n, key)) {
           const child = n[key];
           if (Array.isArray(child)) {
             child.forEach(walk);
@@ -460,21 +480,21 @@ export class ASTAnalyzer {
     return complexity;
   }
 
-  buildDependencyGraph(files: Array<{path: string, metrics: ASTMetrics}>): DependencyGraph {
+  buildDependencyGraph(files: Array<{ path: string; metrics: ASTMetrics }>): DependencyGraph {
     const graph: DependencyGraph = {};
 
     // Initialize graph nodes
-    files.forEach(file => {
+    files.forEach((file) => {
       graph[file.path] = {
         dependencies: [],
         dependents: [],
-        centrality: 0
+        centrality: 0,
       };
     });
 
     // Build dependency relationships
-    files.forEach(file => {
-      file.metrics.dependencies.forEach(dep => {
+    files.forEach((file) => {
+      file.metrics.dependencies.forEach((dep) => {
         // Try to resolve dependency to actual file path
         const resolvedPath = this.resolveDependency(dep, file.path, files);
         if (resolvedPath && graph[resolvedPath]) {
@@ -490,7 +510,11 @@ export class ASTAnalyzer {
     return graph;
   }
 
-  private resolveDependency(dep: string, fromFile: string, files: Array<{path: string}>): string | null {
+  private resolveDependency(
+    dep: string,
+    fromFile: string,
+    files: Array<{ path: string }>
+  ): string | null {
     // Handle relative imports
     if (dep.startsWith('./') || dep.startsWith('../')) {
       const fromDir = path.dirname(fromFile);
@@ -500,7 +524,7 @@ export class ASTAnalyzer {
       const extensions = ['.ts', '.tsx', '.js', '.jsx', '.py', ''];
       for (const ext of extensions) {
         const candidate = resolved + ext;
-        if (files.some(f => f.path === candidate)) {
+        if (files.some((f) => f.path === candidate)) {
           return candidate;
         }
       }
@@ -508,7 +532,7 @@ export class ASTAnalyzer {
       // Try index files
       for (const ext of extensions.slice(0, -1)) {
         const candidate = path.join(resolved, 'index' + ext);
-        if (files.some(f => f.path === candidate)) {
+        if (files.some((f) => f.path === candidate)) {
           return candidate;
         }
       }
@@ -524,18 +548,18 @@ export class ASTAnalyzer {
     const iterations = 10;
 
     // Initialize centrality scores
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
       graph[node].centrality = 1.0;
     });
 
     // Iterative calculation (simplified PageRank)
     for (let i = 0; i < iterations; i++) {
-      const newScores: {[key: string]: number} = {};
+      const newScores: { [key: string]: number } = {};
 
-      nodes.forEach(node => {
-        let score = (1 - dampingFactor);
+      nodes.forEach((node) => {
+        let score = 1 - dampingFactor;
 
-        graph[node].dependents.forEach(dependent => {
+        graph[node].dependents.forEach((dependent) => {
           const dependentOutLinks = graph[dependent].dependencies.length;
           if (dependentOutLinks > 0) {
             score += dampingFactor * (graph[dependent].centrality / dependentOutLinks);
@@ -546,7 +570,7 @@ export class ASTAnalyzer {
       });
 
       // Update scores
-      nodes.forEach(node => {
+      nodes.forEach((node) => {
         graph[node].centrality = newScores[node];
       });
     }
@@ -568,7 +592,7 @@ export class ASTAnalyzer {
     if (metrics.isConfigFile) score += ASTAnalyzer.CONFIG_FILE_SCORE;
 
     // Framework-specific boosts
-    metrics.frameworks.forEach(framework => {
+    metrics.frameworks.forEach((framework) => {
       if (['react', 'vue', 'angular'].includes(framework)) {
         score += ASTAnalyzer.FRONTEND_FRAMEWORK_SCORE;
       }
@@ -578,7 +602,10 @@ export class ASTAnalyzer {
     });
 
     // Code quality indicators
-    score += Math.min(metrics.complexity / ASTAnalyzer.COMPLEXITY_DIVISOR, ASTAnalyzer.COMPLEXITY_MAX_SCORE);
+    score += Math.min(
+      metrics.complexity / ASTAnalyzer.COMPLEXITY_DIVISOR,
+      ASTAnalyzer.COMPLEXITY_MAX_SCORE
+    );
     score += centrality * ASTAnalyzer.CENTRALITY_MULTIPLIER;
 
     // Context-aware scoring
@@ -592,7 +619,9 @@ export class ASTAnalyzer {
 
     // Import penalty (files with too many dependencies might be less important)
     if (metrics.importCount > ASTAnalyzer.IMPORT_THRESHOLD) {
-      score -= (metrics.importCount - ASTAnalyzer.IMPORT_THRESHOLD) * ASTAnalyzer.IMPORT_PENALTY_MULTIPLIER;
+      score -=
+        (metrics.importCount - ASTAnalyzer.IMPORT_THRESHOLD) *
+        ASTAnalyzer.IMPORT_PENALTY_MULTIPLIER;
     }
 
     return Math.max(score, 0);
@@ -600,24 +629,27 @@ export class ASTAnalyzer {
 
   private isMainLogic(metrics: ASTMetrics): boolean {
     // Files with good balance of exports and complexity
-    return metrics.exportCount > 3 &&
-           metrics.functionCount > 5 &&
-           metrics.complexity > 5 &&
-           metrics.complexity < 50;
+    return (
+      metrics.exportCount > 3 &&
+      metrics.functionCount > 5 &&
+      metrics.complexity > 5 &&
+      metrics.complexity < 50
+    );
   }
 
   private isFrameworkCore(metrics: ASTMetrics): boolean {
     // Files that likely contain core framework setup
-    return metrics.frameworks.length > 0 &&
-           (metrics.exportCount > 0 || metrics.functionCount > 3);
+    return metrics.frameworks.length > 0 && (metrics.exportCount > 0 || metrics.functionCount > 3);
   }
 
   private isGeneratedFile(metrics: ASTMetrics): boolean {
     // Simple heuristic for generated files
-    return metrics.functionCount === 0 &&
-           metrics.classCount === 0 &&
-           metrics.exportCount === 0 &&
-           metrics.complexity === 0;
+    return (
+      metrics.functionCount === 0 &&
+      metrics.classCount === 0 &&
+      metrics.exportCount === 0 &&
+      metrics.complexity === 0
+    );
   }
 
   private hashContent(content: string): string {
@@ -625,7 +657,7 @@ export class ASTAnalyzer {
     let hash = 0;
     for (let i = 0; i < content.length; i++) {
       const char = content.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash = hash & hash; // Convert to 32-bit integer
     }
     return hash.toString();
@@ -660,7 +692,11 @@ export class ASTAnalyzer {
     if (content.includes('vue') || content.includes('Vue')) {
       frameworks.push('vue');
     }
-    if (content.includes('angular') || content.includes('Angular') || content.includes('@angular')) {
+    if (
+      content.includes('angular') ||
+      content.includes('Angular') ||
+      content.includes('@angular')
+    ) {
       frameworks.push('angular');
     }
     if (content.includes('svelte') || content.includes('Svelte')) {
@@ -718,16 +754,29 @@ export class ASTAnalyzer {
     const fileName = path.basename(filePath).toLowerCase();
 
     // Common entry point patterns
-    if (['main.js', 'main.ts', 'index.js', 'index.ts', 'app.js', 'app.ts', 'server.js', 'server.ts'].includes(fileName)) {
+    if (
+      [
+        'main.js',
+        'main.ts',
+        'index.js',
+        'index.ts',
+        'app.js',
+        'app.ts',
+        'server.js',
+        'server.ts',
+      ].includes(fileName)
+    ) {
       return true;
     }
 
     // Check for main function or app initialization patterns
-    if (content.includes('function main(') ||
-        content.includes('const main =') ||
-        content.includes('app.listen(') ||
-        content.includes('server.listen(') ||
-        content.includes('if __name__ == "__main__"')) {
+    if (
+      content.includes('function main(') ||
+      content.includes('const main =') ||
+      content.includes('app.listen(') ||
+      content.includes('server.listen(') ||
+      content.includes('if __name__ == "__main__"')
+    ) {
       return true;
     }
 
@@ -738,24 +787,28 @@ export class ASTAnalyzer {
     const fileName = path.basename(filePath).toLowerCase();
 
     // File name patterns
-    if (fileName.includes('test') ||
-        fileName.includes('spec') ||
-        fileName.includes('.test.') ||
-        fileName.includes('.spec.') ||
-        filePath.includes('/test/') ||
-        filePath.includes('/tests/') ||
-        filePath.includes('/__tests__/')) {
+    if (
+      fileName.includes('test') ||
+      fileName.includes('spec') ||
+      fileName.includes('.test.') ||
+      fileName.includes('.spec.') ||
+      filePath.includes('/test/') ||
+      filePath.includes('/tests/') ||
+      filePath.includes('/__tests__/')
+    ) {
       return true;
     }
 
     // Content patterns
-    if (content.includes('describe(') ||
-        content.includes('it(') ||
-        content.includes('test(') ||
-        content.includes('expect(') ||
-        content.includes('assert(') ||
-        content.includes('beforeEach(') ||
-        content.includes('afterEach(')) {
+    if (
+      content.includes('describe(') ||
+      content.includes('it(') ||
+      content.includes('test(') ||
+      content.includes('expect(') ||
+      content.includes('assert(') ||
+      content.includes('beforeEach(') ||
+      content.includes('afterEach(')
+    ) {
       return true;
     }
 
@@ -774,11 +827,14 @@ export class ASTAnalyzer {
       /^requirements\.txt$/,
       /^Dockerfile$/,
       /^docker-compose\./,
-      /^\.env/
+      /^\.env/,
     ];
 
-    return configPatterns.some(pattern => pattern.test(fileName)) ||
-           ['webpack', 'babel', 'eslint', 'prettier', 'jest', 'tsconfig', 'vite', 'rollup'].some(tool =>
-             fileName.includes(tool));
+    return (
+      configPatterns.some((pattern) => pattern.test(fileName)) ||
+      ['webpack', 'babel', 'eslint', 'prettier', 'jest', 'tsconfig', 'vite', 'rollup'].some(
+        (tool) => fileName.includes(tool)
+      )
+    );
   }
 }
