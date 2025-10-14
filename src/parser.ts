@@ -6,7 +6,7 @@ import { FileInfo, ParsedProject, ProjectStructure, ConversionOptions } from './
 import { ASTAnalyzer, ASTMetrics } from './ast-analyzer';
 import { Logger } from './logger';
 
-export class Parser {
+export class CodebaseParser {
   private options: ConversionOptions;
   private gitIgnore: ReturnType<typeof ignore> | null = null;
   private automarkdownIgnore: ReturnType<typeof ignore> | null = null;
@@ -95,17 +95,7 @@ export class Parser {
     this.astAnalyzer = new ASTAnalyzer();
   }
 
-  async parseFile(filePath: string): Promise<ParsedProject & { metrics: { exportCount: number; importCount: number; functionCount: number } }> {
-    const projectPath = path.dirname(filePath);
-    
-    // Ensure temp directory exists
-    await fs.promises.mkdir(projectPath, { recursive: true });
-    
-    const content = await fs.promises.readFile(filePath, 'utf-8');
-    
-    // Initialize astAnalyzer if not already done
-    this.astAnalyzer = this.astAnalyzer || new ASTAnalyzer();
-    
+  async parseProject(projectPath: string): Promise<ParsedProject> {
     // Load .gitignore patterns if available
     await this.loadGitIgnore(projectPath);
 
@@ -119,7 +109,46 @@ export class Parser {
     const structure = await this.buildProjectStructure(projectPath);
     const summary = this.generateProjectSummary(files);
 
-    const metrics = await this.astAnalyzer.analyzeFile(filePath, content, this.detectLanguage(filePath));
+    return {
+      files: files.sort((a, b) => b.importance - a.importance),
+      structure,
+      summary,
+    };
+  }
+
+  async parseFile(
+    filePath: string
+  ): Promise<
+    ParsedProject & { metrics: { exportCount: number; importCount: number; functionCount: number } }
+  > {
+    const projectPath = path.dirname(filePath);
+
+    // Ensure temp directory exists
+    await fs.promises.mkdir(projectPath, { recursive: true });
+
+    const content = await fs.promises.readFile(filePath, 'utf-8');
+
+    // Initialize astAnalyzer if not already done
+    this.astAnalyzer = this.astAnalyzer || new ASTAnalyzer();
+
+    // Load .gitignore patterns if available
+    await this.loadGitIgnore(projectPath);
+
+    const files = await this.getProjectFiles(projectPath);
+
+    // Perform AST analysis if enabled
+    if (this.options.useASTAnalysis) {
+      await this.performASTAnalysis(files);
+    }
+
+    const structure = await this.buildProjectStructure(projectPath);
+    const summary = this.generateProjectSummary(files);
+
+    const metrics = await this.astAnalyzer.analyzeFile(
+      filePath,
+      content,
+      this.detectLanguage(filePath)
+    );
 
     return {
       files: files.sort((a, b) => b.importance - a.importance),
@@ -128,8 +157,8 @@ export class Parser {
       metrics: {
         exportCount: metrics.exportCount,
         importCount: metrics.importCount,
-        functionCount: metrics.functionCount
-      }
+        functionCount: metrics.functionCount,
+      },
     };
   }
 
@@ -338,6 +367,7 @@ export class Parser {
 
     // Check for high ratio of non-printable characters
     // Use regex to count non-printable characters for better performance
+    // eslint-disable-next-line no-control-regex
     const nonPrintableMatches = content.match(/[\x00-\x08\x0E-\x1F\x7F-\xFF]/g);
     const nonPrintableCount = nonPrintableMatches ? nonPrintableMatches.length : 0;
     const ratio = nonPrintableCount / content.length;

@@ -1,14 +1,14 @@
-import { Converter } from '../src/converter';
+import { MarkdownConverter } from '../src/converter';
 import { createTempFile, cleanupTempFiles, mockConsole } from './utils/test-helpers';
 import * as fs from 'fs';
 import * as path from 'path';
 
-describe('Converter', () => {
-  let converter: Converter;
+describe('MarkdownConverter', () => {
+  let converter: MarkdownConverter;
   const consoleMock = mockConsole();
 
   beforeEach(() => {
-    converter = new Converter();
+    converter = new MarkdownConverter();
   });
 
   afterEach(() => {

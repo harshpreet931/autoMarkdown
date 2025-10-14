@@ -557,7 +557,7 @@ export class ASTAnalyzer {
       const newScores: { [key: string]: number } = {};
 
       nodes.forEach((node) => {
-        let score = (1 - dampingFactor);
+        let score = 1 - dampingFactor;
 
         graph[node].dependents.forEach((dependent) => {
           const dependentOutLinks = graph[dependent].dependencies.length;

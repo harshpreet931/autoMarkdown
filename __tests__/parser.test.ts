@@ -1,7 +1,7 @@
-import { Parser } from '../src/parser';
+import { CodebaseParser } from '../src/parser';
 import { createTempFile, cleanupTempFiles } from './utils/test-helpers';
 
-describe('Parser', () => {
+describe('CodebaseParser', () => {
   afterEach(() => {
     cleanupTempFiles();
   });
@@ -21,7 +21,7 @@ describe('Parser', () => {
     `;
     
     const filePath = createTempFile(content);
-    const parser = new Parser();
+    const parser = new CodebaseParser();
     const result = await parser.parseFile(filePath);
     
     expect(result).toBeDefined();
@@ -41,7 +41,7 @@ describe('Parser', () => {
     `;
     
     const filePath = createTempFile(content, '.py');
-    const parser = new Parser();
+    const parser = new CodebaseParser();
     const result = await parser.parseFile(filePath);
     
     expect(result).toBeDefined();
