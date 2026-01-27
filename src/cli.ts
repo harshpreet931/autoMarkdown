@@ -24,6 +24,7 @@ program
   .option('--exclude <patterns>', 'Comma-separated exclude patterns', 'node_modules/**,.git/**,dist/**,build/**')
   .option('--include <patterns>', 'Comma-separated include patterns', '**/*')
   .option('--no-metadata', 'Exclude file metadata from output')
+  .option('--github-url <url>', 'GitHub URL of the codebase')
   .option('--no-ast-analysis', 'Disable AST-based importance scoring (not recommended)')
   .action(async (projectPath: string, options) => {
     try {
@@ -66,7 +67,8 @@ program
         includePatterns: options.include.split(',').map((p: string) => p.trim()),
         outputFormat: options.format as 'markdown' | 'json',
         includeMetadata: options.metadata !== false,
-        useASTAnalysis: options.astAnalysis !== false
+        useASTAnalysis: options.astAnalysis !== false,
+        githubUrl: options.githubUrl
       };
 
       const autoMarkdown = new AutoMarkdown(conversionOptions);
