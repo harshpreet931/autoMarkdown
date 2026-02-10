@@ -1,5 +1,5 @@
 ---
-title: "AutoMarkdown: Intelligent Codebase to Markdown Converter"
+title: "AutoMarkdown: Intelligent Codebase to Markdown Converter 123 diff"
 format: html
 ---
 
@@ -29,7 +29,7 @@ The parser is responsible for scanning and analyzing the project structure.
 
 ```typescript
 export class CodebaseParser {
-  private options: ConversionOptions;
+  private options: ConversionOptions;x
   private gitIgnore: ReturnType<typeof ignore> | null = null;
   private astAnalyzer: ASTAnalyzer;
 }
