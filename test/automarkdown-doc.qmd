@@ -4,7 +4,7 @@ format: html
 ---
 
 # Overview
-
+f
 AutoMarkdown is a powerful tool that converts entire codebases into LLM-ready markdown documents. It analyzes your project structure, filters out unnecessary files, and generates well-organized documentation that large language models can easily understand and process.
 
 ## Why Use AutoMarkdown?
@@ -23,7 +23,7 @@ Large language models (LLMs) understand markdown better than raw code directorie
 
 AutoMarkdown follows a modular architecture with three main components:
 
-## 1. CodebaseParser
+## 1. CodebaseParser 
 
 The parser is responsible for scanning and analyzing the project structure.
 
@@ -35,6 +35,8 @@ export class CodebaseParser {
 }
 ```
 
+
+//XYNE-1
 ### Key Responsibilities:
 
 - **File Discovery**: Uses glob patterns to find all relevant files
@@ -234,7 +236,7 @@ AutoMarkdown supports 40+ programming languages:
 - **Rust**: .rs
 - **Ruby**: .rb
 - **PHP**: .php
-- **And 30+ more...**
+- **And 30+ more...**f
 
 ## Output Formats
 

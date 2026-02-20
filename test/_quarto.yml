@@ -1,0 +1,22 @@
+project:
+  type: website
+  output-dir: _output
+
+website:
+  title: "AutoMarkdown Documentation"
+  navbar:
+    title: "AutoMarkdown"
+    left:
+      - text: "Documentation"
+        file: automarkdown-doc.qmd
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    code-fold: false
+    code-tools: true
+    code-copy: true
+    number-sections: true
+    highlight-style: github
